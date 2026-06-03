@@ -22,11 +22,11 @@ function formatCurrency(value) {
 function updateDashboard() {
   const totalIncome = transactions
     .filter((transaction) => transaction.type === "entrada")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
 
   const totalExpense = transactions
     .filter((transaction) => transaction.type === "saida")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
 
   const currentBalance = totalIncome - totalExpense;
 
@@ -58,9 +58,14 @@ function addTransactionToTable(transaction) {
     <td>${transaction.type}</td>
     <td>${transaction.description}</td>
     <td>${transaction.category}</td>
-    <td>${formatCurrency(transaction.amount)}</td>
+    <td>${formatCurrency(Number(transaction.amount))}</td>
     <td>${transaction.dueDate}</td>
     <td>${transaction.status}</td>
+    <td>
+      <button class="delete-button" data-id="${transaction.id}">
+        Excluir
+      </button>
+    </td>
   `;
 
   tableBody.appendChild(row);
@@ -74,6 +79,19 @@ function renderTransactions() {
   });
 
   updateDashboard();
+}
+
+function deleteTransaction(id) {
+  const confirmed = confirm("Deseja realmente excluir este lançamento?");
+
+  if (!confirmed) {
+    return;
+  }
+
+  transactions = transactions.filter((transaction) => transaction.id !== id);
+
+  saveTransactions();
+  renderTransactions();
 }
 
 form.addEventListener("submit", function (event) {
@@ -95,6 +113,13 @@ form.addEventListener("submit", function (event) {
   renderTransactions();
 
   form.reset();
+});
+
+tableBody.addEventListener("click", function (event) {
+  if (event.target.classList.contains("delete-button")) {
+    const id = event.target.dataset.id;
+    deleteTransaction(id);
+  }
 });
 
 renderTransactions();
