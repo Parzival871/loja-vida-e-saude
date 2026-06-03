@@ -12,6 +12,13 @@ const projection7DaysElement = document.getElementById("projection-7-days");
 const projection15DaysElement = document.getElementById("projection-15-days");
 const projection30DaysElement = document.getElementById("projection-30-days");
 
+const cashflowDateInput = document.getElementById("cashflow-date");
+const selectedDateIncomeElement = document.getElementById("selected-date-income");
+const selectedDateExpenseElement = document.getElementById("selected-date-expense");
+const selectedDateBalanceElement = document.getElementById("selected-date-balance");
+const selectedDatePendingExpenseElement = document.getElementById("selected-date-pending-expense");
+const weeklyCashflowBody = document.getElementById("weekly-cashflow-body");
+
 const categoryReportBody = document.getElementById("category-report-body");
 const incomeExpenseChart = document.getElementById("income-expense-chart");
 const expenseCategoryChart = document.getElementById("expense-category-chart");
@@ -63,6 +70,16 @@ function formatCurrency(value) {
   });
 }
 
+function formatDateForInput(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDateForDisplay(dateString) {
+  const date = parseDate(dateString);
+
+  return date.toLocaleDateString("pt-BR");
+}
+
 function getSortedCategories() {
   return [...categories].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
@@ -81,6 +98,21 @@ function addDays(baseDate, days) {
 
 function parseDate(dateString) {
   return new Date(dateString + "T00:00:00");
+}
+
+function isSameDate(dateString, targetDate) {
+  return formatDateForInput(parseDate(dateString)) === formatDateForInput(targetDate);
+}
+
+function setDefaultDates() {
+  const todayAsText = formatDateForInput(getToday());
+
+  document.getElementById("date").value = todayAsText;
+  document.getElementById("due-date").value = todayAsText;
+
+  if (!cashflowDateInput.value) {
+    cashflowDateInput.value = todayAsText;
+  }
 }
 
 function renderCategories() {
@@ -148,6 +180,74 @@ function calculateProjectedBalance(daysAhead) {
   }, 0);
 }
 
+function getTransactionsByDueDate(targetDate) {
+  return transactions.filter((transaction) =>
+    isSameDate(transaction.dueDate, targetDate)
+  );
+}
+
+function calculateDailySummary(targetDate) {
+  const transactionsOfDay = getTransactionsByDueDate(targetDate);
+
+  const income = transactionsOfDay
+    .filter((transaction) => transaction.type === "entrada")
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+  const expense = transactionsOfDay
+    .filter((transaction) => transaction.type === "saida")
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+  const pendingExpense = transactionsOfDay
+    .filter(
+      (transaction) =>
+        transaction.type === "saida" && transaction.status === "pendente"
+    )
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+  return {
+    income,
+    expense,
+    pendingExpense,
+    balance: income - expense,
+  };
+}
+
+function renderSelectedDateCashflow() {
+  const selectedDate = cashflowDateInput.value
+    ? parseDate(cashflowDateInput.value)
+    : getToday();
+
+  const summary = calculateDailySummary(selectedDate);
+
+  selectedDateIncomeElement.textContent = formatCurrency(summary.income);
+  selectedDateExpenseElement.textContent = formatCurrency(summary.expense);
+  selectedDateBalanceElement.textContent = formatCurrency(summary.balance);
+  selectedDatePendingExpenseElement.textContent = formatCurrency(summary.pendingExpense);
+}
+
+function renderWeeklyCashflow() {
+  weeklyCashflowBody.innerHTML = "";
+
+  const today = getToday();
+
+  for (let index = 0; index < 7; index++) {
+    const currentDate = addDays(today, index);
+    const summary = calculateDailySummary(currentDate);
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+      <td>${formatDateForDisplay(formatDateForInput(currentDate))}</td>
+      <td>${formatCurrency(summary.income)}</td>
+      <td>${formatCurrency(summary.expense)}</td>
+      <td>${formatCurrency(summary.pendingExpense)}</td>
+      <td>${formatCurrency(summary.balance)}</td>
+    `;
+
+    weeklyCashflowBody.appendChild(row);
+  }
+}
+
 function updateDashboard() {
   const totalIncome = calculateTotalByType("entrada");
   const totalExpense = calculateTotalByType("saida");
@@ -199,7 +299,7 @@ function addTransactionToTable(transaction) {
     <td>${transaction.description}</td>
     <td>${transaction.category}</td>
     <td>${formatCurrency(Number(transaction.amount))}</td>
-    <td>${transaction.dueDate}</td>
+    <td>${formatDateForDisplay(transaction.dueDate)}</td>
     <td>${displayStatus}</td>
     <td>
       <button class="edit-button" data-id="${transaction.id}">
@@ -249,6 +349,8 @@ function renderTransactions() {
   });
 
   updateDashboard();
+  renderSelectedDateCashflow();
+  renderWeeklyCashflow();
   renderCategoryReport();
   renderCharts();
 }
@@ -412,6 +514,7 @@ function resetFormState() {
   editingTransactionId = null;
 
   form.reset();
+  setDefaultDates();
 
   submitButton.textContent = "Adicionar lançamento";
   cancelEditButton.classList.add("hidden");
@@ -419,8 +522,8 @@ function resetFormState() {
 
 function exportBackup() {
   const backupData = {
-    appName: "Financeiro MVP",
-    version: "1.1.0",
+    appName: "Loja Vida e Saúde",
+    version: "1.2.0",
     exportDate: new Date().toISOString(),
     transactions,
     categories,
@@ -436,7 +539,7 @@ function exportBackup() {
 
   const link = document.createElement("a");
   link.href = downloadUrl;
-  link.download = `financeiro-mvp-backup-${new Date()
+  link.download = `loja-vida-saude-backup-${new Date()
     .toISOString()
     .slice(0, 10)}.json`;
 
@@ -574,6 +677,7 @@ cancelEditButton.addEventListener("click", resetFormState);
 filterType.addEventListener("change", renderTransactions);
 filterCategory.addEventListener("change", renderTransactions);
 filterStatus.addEventListener("change", renderTransactions);
+cashflowDateInput.addEventListener("change", renderSelectedDateCashflow);
 
 addCategoryButton.addEventListener("click", () => {
   const newCategory = newCategoryInput.value.trim();
@@ -610,5 +714,6 @@ importBackupInput.addEventListener("change", (event) => {
   importBackup(file);
 });
 
+setDefaultDates();
 renderCategories();
 renderTransactions();

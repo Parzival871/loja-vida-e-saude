@@ -57,9 +57,29 @@ main {
   margin-bottom: 15px;
 }
 
+.section-description {
+  color: #6c757d;
+  margin-bottom: 16px;
+}
+
 form {
   display: grid;
   gap: 12px;
+}
+
+.field-group {
+  display: grid;
+  gap: 6px;
+}
+
+.field-group label {
+  font-weight: bold;
+  color: #2d6a4f;
+}
+
+.compact-field {
+  max-width: 280px;
+  margin-bottom: 20px;
 }
 
 input,
