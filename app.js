@@ -69,10 +69,14 @@ const DOM = {
   projection30Days: document.getElementById("projection-30-days"),
 
   cashflowDate: document.getElementById("cashflow-date"),
-  selectedDateIncome: document.getElementById("selected-date-income"),
-  selectedDateExpense: document.getElementById("selected-date-expense"),
-  selectedDateBalance: document.getElementById("selected-date-balance"),
-  selectedDatePendingExpense: document.getElementById("selected-date-pending-expense"),
+  dailyRealizedIncome: document.getElementById("daily-realized-income"),
+  dailyRealizedExpense: document.getElementById("daily-realized-expense"),
+  dailyRealizedBalance: document.getElementById("daily-realized-balance"),
+  dailyExpectedIncome: document.getElementById("daily-expected-income"),
+  dailyExpectedExpense: document.getElementById("daily-expected-expense"),
+  dailyExpectedBalance: document.getElementById("daily-expected-balance"),
+  dailyPendingExpense: document.getElementById("daily-pending-expense"),
+  dailyPendingIncome: document.getElementById("daily-pending-income"),
   weeklyCashflowBody: document.getElementById("weekly-cashflow-body"),
 
   categoryReportBody: document.getElementById("category-report-body"),
@@ -881,26 +885,34 @@ function getTransactionsByDueDate(targetISO) {
 function calculateDailySummary(targetISO) {
   const transactionsOfDay = getTransactionsByDueDate(targetISO);
 
-  const incomeCents = sumAmountCents(
-    transactionsOfDay.filter((transaction) => transaction.type === "entrada")
+  const realizedIncomeCents = sumAmountCents(
+    transactionsOfDay.filter(isRealizedIncome)
+  );
+  const expectedIncomeCents = sumAmountCents(
+    transactionsOfDay.filter(isExpectedIncome)
+  );
+  const realizedExpenseCents = sumAmountCents(
+    transactionsOfDay.filter(isRealizedExpense)
+  );
+  const expectedExpenseCents = sumAmountCents(
+    transactionsOfDay.filter(isExpectedExpense)
   );
 
-  const expenseCents = sumAmountCents(
-    transactionsOfDay.filter((transaction) => transaction.type === "saida")
-  );
-
-  const pendingExpenseCents = sumAmountCents(
-    transactionsOfDay.filter(
-      (transaction) =>
-        transaction.type === "saida" && transaction.status === "pendente"
-    )
-  );
+  const realizedBalanceCents = realizedIncomeCents - realizedExpenseCents;
+  const expectedBalanceCents =
+    realizedIncomeCents +
+    expectedIncomeCents -
+    (realizedExpenseCents + expectedExpenseCents);
 
   return {
-    incomeCents,
-    expenseCents,
-    pendingExpenseCents,
-    balanceCents: incomeCents - expenseCents,
+    realizedIncomeCents,
+    expectedIncomeCents,
+    realizedExpenseCents,
+    expectedExpenseCents,
+    realizedBalanceCents,
+    expectedBalanceCents,
+    pendingExpenseCents: expectedExpenseCents,
+    pendingIncomeCents: expectedIncomeCents,
   };
 }
 
@@ -1029,10 +1041,16 @@ function renderSelectedDateCashflow() {
   const selectedISO = normalizeISODateString(DOM.cashflowDate.value) || getTodayISO();
   const summary = calculateDailySummary(selectedISO);
 
-  DOM.selectedDateIncome.textContent = formatCents(summary.incomeCents);
-  DOM.selectedDateExpense.textContent = formatCents(summary.expenseCents);
-  DOM.selectedDateBalance.textContent = formatCents(summary.balanceCents);
-  DOM.selectedDatePendingExpense.textContent = formatCents(summary.pendingExpenseCents);
+  DOM.dailyRealizedIncome.textContent = formatCents(summary.realizedIncomeCents);
+  DOM.dailyRealizedExpense.textContent = formatCents(summary.realizedExpenseCents);
+  DOM.dailyRealizedBalance.textContent = formatCents(summary.realizedBalanceCents);
+
+  DOM.dailyExpectedIncome.textContent = formatCents(summary.expectedIncomeCents);
+  DOM.dailyExpectedExpense.textContent = formatCents(summary.expectedExpenseCents);
+  DOM.dailyExpectedBalance.textContent = formatCents(summary.expectedBalanceCents);
+
+  DOM.dailyPendingExpense.textContent = formatCents(summary.pendingExpenseCents);
+  DOM.dailyPendingIncome.textContent = formatCents(summary.pendingIncomeCents);
 }
 
 function renderWeeklyCashflow() {
@@ -1046,10 +1064,14 @@ function renderWeeklyCashflow() {
     const row = document.createElement("tr");
 
     appendTextCell(row, formatISODateForDisplay(currentISO));
-    appendTextCell(row, formatCents(summary.incomeCents));
-    appendTextCell(row, formatCents(summary.expenseCents));
+    appendTextCell(row, formatCents(summary.realizedIncomeCents));
+    appendTextCell(row, formatCents(summary.expectedIncomeCents));
+    appendTextCell(row, formatCents(summary.realizedExpenseCents));
+    appendTextCell(row, formatCents(summary.expectedExpenseCents));
     appendTextCell(row, formatCents(summary.pendingExpenseCents));
-    appendTextCell(row, formatCents(summary.balanceCents));
+    appendTextCell(row, formatCents(summary.pendingIncomeCents));
+    appendTextCell(row, formatCents(summary.realizedBalanceCents));
+    appendTextCell(row, formatCents(summary.expectedBalanceCents));
 
     DOM.weeklyCashflowBody.appendChild(row);
   }

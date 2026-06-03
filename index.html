@@ -248,7 +248,7 @@
     <section class="formulario">
       <h2>Fluxo de Caixa por Data</h2>
       <p class="section-description">
-        Selecione uma data para visualizar entradas, saídas e contas pendentes daquele dia.
+        Fluxo calculado pela data de vencimento. Selecione uma data para consultar o dia.
       </p>
 
       <div class="field-group compact-field">
@@ -256,25 +256,60 @@
         <input id="cashflow-date" type="date">
       </div>
 
-      <div class="projection-cards cashflow-summary">
-        <div class="projection-card">
-          <h3>Entradas no dia</h3>
-          <p id="selected-date-income">R$ 0,00</p>
+      <div class="summary-groups cashflow-groups">
+        <div class="summary-group">
+          <h3 class="summary-group-title">Realizado no dia</h3>
+          <div class="projection-cards cashflow-summary">
+            <div class="projection-card">
+              <h3>Entradas recebidas no dia</h3>
+              <p id="daily-realized-income">R$ 0,00</p>
+            </div>
+
+            <div class="projection-card">
+              <h3>Saídas pagas no dia</h3>
+              <p id="daily-realized-expense">R$ 0,00</p>
+            </div>
+
+            <div class="projection-card">
+              <h3>Saldo realizado do dia</h3>
+              <p id="daily-realized-balance">R$ 0,00</p>
+            </div>
+          </div>
         </div>
 
-        <div class="projection-card">
-          <h3>Saídas no dia</h3>
-          <p id="selected-date-expense">R$ 0,00</p>
+        <div class="summary-group">
+          <h3 class="summary-group-title">Previsto no dia</h3>
+          <div class="projection-cards cashflow-summary">
+            <div class="projection-card">
+              <h3>Entradas previstas no dia</h3>
+              <p id="daily-expected-income">R$ 0,00</p>
+            </div>
+
+            <div class="projection-card">
+              <h3>Saídas previstas no dia</h3>
+              <p id="daily-expected-expense">R$ 0,00</p>
+            </div>
+
+            <div class="projection-card">
+              <h3>Saldo previsto do dia</h3>
+              <p id="daily-expected-balance">R$ 0,00</p>
+            </div>
+          </div>
         </div>
 
-        <div class="projection-card">
-          <h3>Saldo do dia</h3>
-          <p id="selected-date-balance">R$ 0,00</p>
-        </div>
+        <div class="summary-group">
+          <h3 class="summary-group-title">Pendências do dia</h3>
+          <div class="projection-cards cashflow-summary">
+            <div class="projection-card">
+              <h3>Pendente a pagar</h3>
+              <p id="daily-pending-expense">R$ 0,00</p>
+            </div>
 
-        <div class="projection-card">
-          <h3>Pendente a pagar</h3>
-          <p id="selected-date-pending-expense">R$ 0,00</p>
+            <div class="projection-card">
+              <h3>Pendente a receber</h3>
+              <p id="daily-pending-income">R$ 0,00</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -282,7 +317,7 @@
     <section class="formulario">
       <h2>Próximos 7 Dias</h2>
       <p class="section-description">
-        Visão diária do que há para receber, pagar e o saldo previsto por vencimento.
+        Fluxo calculado pela data de vencimento.
       </p>
 
       <div class="report-table-wrapper">
@@ -290,10 +325,14 @@
           <thead>
             <tr>
               <th>Data</th>
-              <th>Entradas</th>
-              <th>Saídas</th>
+              <th>Entradas recebidas</th>
+              <th>Entradas previstas</th>
+              <th>Saídas pagas</th>
+              <th>Saídas previstas</th>
               <th>Pendente a pagar</th>
-              <th>Saldo do dia</th>
+              <th>Pendente a receber</th>
+              <th>Saldo realizado</th>
+              <th>Saldo previsto</th>
             </tr>
           </thead>
 

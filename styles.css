@@ -83,6 +83,14 @@ main {
   color: var(--danger);
 }
 
+.cashflow-groups {
+  margin-top: 16px;
+}
+
+.cashflow-groups .summary-group-title {
+  font-size: 1rem;
+}
+
 .cards,
 .projection-cards,
 .charts-grid {
