@@ -9,13 +9,52 @@ const overdueBillsElement = document.getElementById("overdue-bills");
 const submitButton = document.getElementById("submit-button");
 const cancelEditButton = document.getElementById("cancel-edit-button");
 const filterType = document.getElementById("filter-type");
+const categorySelect = document.getElementById("category");
+const newCategoryInput = document.getElementById("new-category");
+const addCategoryButton = document.getElementById("add-category-button");
 
 let editingTransactionId = null;
+let categories =
+  JSON.parse(localStorage.getItem("categories")) || [
+    "Vendas",
+    "Mercadorias",
+    "Aluguel",
+    "Energia",
+    "Água",
+    "Internet",
+    "Impostos",
+    "Pró-labore",
+    "Marketing",
+    "Fretes",
+    "Outros"
+  ];
 
 let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
 
 function saveTransactions() {
   localStorage.setItem("transactions", JSON.stringify(transactions));
+}
+function saveCategories() {
+  localStorage.setItem("categories", JSON.stringify(categories));
+}
+
+function renderCategories() {
+  categorySelect.innerHTML = `
+    <option value="">
+      Selecione uma categoria
+    </option>
+  `;
+
+   [...categories]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"))
+    .forEach((category) => {
+        const option = document.createElement("option");
+
+        option.value = category;
+        option.textContent = category;
+
+        categorySelect.appendChild(option);
+    });
 }
 
 function formatCurrency(value) {
@@ -234,4 +273,26 @@ filterType.addEventListener(
   "change",
   renderTransactions
 );
+addCategoryButton.addEventListener("click", () => {
+  const newCategory = newCategoryInput.value.trim();
+
+  if (!newCategory) {
+    alert("Informe o nome da categoria.");
+    return;
+  }
+
+  if (categories.includes(newCategory)) {
+    alert("Essa categoria já existe.");
+    return;
+  }
+
+  categories.push(newCategory);
+  categories.sort();
+
+  saveCategories();
+  renderCategories();
+
+  newCategoryInput.value = "";
+});
+renderCategories();
 renderTransactions();
