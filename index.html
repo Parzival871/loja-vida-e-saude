@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financeiro MVP</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header>
+    <h1>Financeiro MVP</h1>
+    <p>Controle financeiro simplificado</p>
+  </header>
+
+  <main>
+
+    <section class="cards">
+
+      <div class="card">
+        <h3>Saldo Atual</h3>
+        <p>R$ 0,00</p>
+      </div>
+
+      <div class="card">
+        <h3>Entradas</h3>
+        <p>R$ 0,00</p>
+      </div>
+
+      <div class="card">
+        <h3>Saídas</h3>
+        <p>R$ 0,00</p>
+      </div>
+
+      <div class="card">
+        <h3>Contas a Vencer</h3>
+        <p>0</p>
+      </div>
+
+    </section>
+
+    <section class="formulario">
+
+      <h2>Novo Lançamento</h2>
+
+      <form>
+
+        <select>
+          <option>Entrada</option>
+          <option>Saída</option>
+        </select>
+
+        <input
+          type="text"
+          placeholder="Descrição"
+        >
+
+        <input
+          type="text"
+          placeholder="Categoria"
+        >
+
+        <input
+          type="number"
+          placeholder="Valor"
+        >
+
+        <input
+          type="date"
+        >
+
+        <input
+          type="date"
+        >
+
+        <select>
+          <option>Pendente</option>
+          <option>Pago</option>
+          <option>Recebido</option>
+        </select>
+
+        <button type="button">
+          Adicionar lançamento
+        </button>
+
+      </form>
+
+    </section>
+
+    <section class="tabela">
+
+      <h2>Lançamentos</h2>
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Valor</th>
+            <th>Vencimento</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          <tr>
+            <td>Saída</td>
+            <td>Fornecedor</td>
+            <td>Mercadoria</td>
+            <td>R$ 500,00</td>
+            <td>05/06/2026</td>
+            <td>Pendente</td>
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
