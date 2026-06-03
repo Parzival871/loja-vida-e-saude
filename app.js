@@ -8,6 +8,7 @@ const upcomingBillsElement = document.getElementById("upcoming-bills");
 const overdueBillsElement = document.getElementById("overdue-bills");
 const submitButton = document.getElementById("submit-button");
 const cancelEditButton = document.getElementById("cancel-edit-button");
+const filterType = document.getElementById("filter-type");
 
 let editingTransactionId = null;
 
@@ -108,14 +109,30 @@ if (
 }
 
 function renderTransactions() {
+
   tableBody.innerHTML = "";
 
-  transactions.forEach((transaction) => {
-    addTransactionToTable(transaction);
-  });
+  let filteredTransactions = [...transactions];
+
+  if (filterType.value !== "all") {
+
+    filteredTransactions =
+      filteredTransactions.filter(
+        (transaction) =>
+          transaction.type === filterType.value
+      );
+
+  }
+
+  filteredTransactions.forEach(
+    (transaction) => {
+      addTransactionToTable(transaction);
+    }
+  );
 
   updateDashboard();
 }
+
 function editTransaction(id) {
   const transaction = transactions.find(
     (transaction) => transaction.id === id
@@ -213,4 +230,8 @@ cancelEditButton.addEventListener("click", () => {
 
   cancelEditButton.classList.add("hidden");
 });
+filterType.addEventListener(
+  "change",
+  renderTransactions
+);
 renderTransactions();

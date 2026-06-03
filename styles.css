@@ -114,3 +114,10 @@ th {
 .hidden {
   display: none;
 }
+.filters {
+  margin-bottom: 20px;
+}
+
+.filters select {
+  max-width: 250px;
+}
