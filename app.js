@@ -9,6 +9,7 @@ const overdueBillsElement = document.getElementById("overdue-bills");
 const submitButton = document.getElementById("submit-button");
 const cancelEditButton = document.getElementById("cancel-edit-button");
 const filterType = document.getElementById("filter-type");
+const filterCategory = document.getElementById("filter-category");
 const categorySelect = document.getElementById("category");
 const newCategoryInput = document.getElementById("new-category");
 const addCategoryButton = document.getElementById("add-category-button");
@@ -44,15 +45,24 @@ function renderCategories() {
     </option>
   `;
 
-   [...categories]
+  filterCategory.innerHTML = `
+    <option value="todos">
+      Todas as categorias
+    </option>
+  `;
+
+  [...categories]
     .sort((a, b) => a.localeCompare(b, "pt-BR"))
     .forEach((category) => {
-        const option = document.createElement("option");
+      const categoryOption = document.createElement("option");
+      categoryOption.value = category;
+      categoryOption.textContent = category;
+      categorySelect.appendChild(categoryOption);
 
-        option.value = category;
-        option.textContent = category;
-
-        categorySelect.appendChild(option);
+      const filterOption = document.createElement("option");
+      filterOption.value = category;
+      filterOption.textContent = category;
+      filterCategory.appendChild(filterOption);
     });
 }
 function renderCategoriesList() {
@@ -175,30 +185,28 @@ if (
 }
 
 function renderTransactions() {
-
   tableBody.innerHTML = "";
 
   let filteredTransactions = [...transactions];
 
   if (filterType.value !== "all") {
-
-    filteredTransactions =
-      filteredTransactions.filter(
-        (transaction) =>
-          transaction.type === filterType.value
-      );
-
+    filteredTransactions = filteredTransactions.filter(
+      (transaction) => transaction.type === filterType.value
+    );
   }
 
-  filteredTransactions.forEach(
-    (transaction) => {
-      addTransactionToTable(transaction);
-    }
-  );
+  if (filterCategory.value !== "todos") {
+    filteredTransactions = filteredTransactions.filter(
+      (transaction) => transaction.category === filterCategory.value
+    );
+  }
+
+  filteredTransactions.forEach((transaction) => {
+    addTransactionToTable(transaction);
+  });
 
   updateDashboard();
 }
-
 function editTransaction(id) {
   const transaction = transactions.find(
     (transaction) => transaction.id === id
@@ -297,6 +305,10 @@ cancelEditButton.addEventListener("click", () => {
   cancelEditButton.classList.add("hidden");
 });
 filterType.addEventListener(
+  "change",
+  renderTransactions
+);
+filterCategory.addEventListener(
   "change",
   renderTransactions
 );
