@@ -103,3 +103,14 @@ th {
     overflow-x: auto;
   }
 }
+.secondary-button {
+  background: #6c757d;
+}
+
+.secondary-button:hover {
+  background: #5a6268;
+}
+
+.hidden {
+  display: none;
+}

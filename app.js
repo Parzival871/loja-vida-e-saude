@@ -5,6 +5,10 @@ const currentBalanceElement = document.getElementById("current-balance");
 const totalIncomeElement = document.getElementById("total-income");
 const totalExpenseElement = document.getElementById("total-expense");
 const upcomingBillsElement = document.getElementById("upcoming-bills");
+const submitButton = document.getElementById("submit-button");
+const cancelEditButton = document.getElementById("cancel-edit-button");
+
+let editingTransactionId = null;
 
 let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
 
@@ -62,10 +66,14 @@ function addTransactionToTable(transaction) {
     <td>${transaction.dueDate}</td>
     <td>${transaction.status}</td>
     <td>
-      <button class="delete-button" data-id="${transaction.id}">
-        Excluir
-      </button>
-    </td>
+  <button class="edit-button" data-id="${transaction.id}">
+    Editar
+  </button>
+
+  <button class="delete-button" data-id="${transaction.id}">
+    Excluir
+  </button>
+</td>
   `;
 
   tableBody.appendChild(row);
@@ -80,7 +88,27 @@ function renderTransactions() {
 
   updateDashboard();
 }
+function editTransaction(id) {
+  const transaction = transactions.find(
+    (transaction) => transaction.id === id
+  );
 
+  if (!transaction) return;
+
+  document.getElementById("type").value = transaction.type;
+  document.getElementById("description").value = transaction.description;
+  document.getElementById("category").value = transaction.category;
+  document.getElementById("amount").value = transaction.amount;
+  document.getElementById("date").value = transaction.date;
+  document.getElementById("due-date").value = transaction.dueDate;
+  document.getElementById("status").value = transaction.status;
+
+  editingTransactionId = id;
+
+  submitButton.textContent = "Salvar alterações";
+
+  cancelEditButton.classList.remove("hidden");
+}
 function deleteTransaction(id) {
   const confirmed = confirm("Deseja realmente excluir este lançamento?");
 
@@ -108,18 +136,53 @@ form.addEventListener("submit", function (event) {
     status: document.getElementById("status").value,
   };
 
-  transactions.push(transaction);
-  saveTransactions();
-  renderTransactions();
+  if (editingTransactionId) {
+  transactions = transactions.map((item) => {
+    if (item.id === editingTransactionId) {
+      return {
+        ...transaction,
+        id: editingTransactionId,
+      };
+    }
 
-  form.reset();
+    return item;
+  });
+
+  editingTransactionId = null;
+
+  submitButton.textContent = "Adicionar lançamento";
+  cancelEditButton.classList.add("hidden");
+} else {
+  transactions.push(transaction);
+}
+
+saveTransactions();
+renderTransactions();
+
+form.reset();
 });
 
 tableBody.addEventListener("click", function (event) {
+
+  if (event.target.classList.contains("edit-button")) {
+    const id = event.target.dataset.id;
+    editTransaction(id);
+    return;
+  }
+
   if (event.target.classList.contains("delete-button")) {
     const id = event.target.dataset.id;
     deleteTransaction(id);
   }
-});
 
+});
+cancelEditButton.addEventListener("click", () => {
+  editingTransactionId = null;
+
+  form.reset();
+
+  submitButton.textContent = "Adicionar lançamento";
+
+  cancelEditButton.classList.add("hidden");
+});
 renderTransactions();
