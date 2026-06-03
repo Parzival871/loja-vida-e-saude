@@ -14,34 +14,47 @@
   </header>
 
   <main>
+    <section class="summary-section">
+      <div class="summary-toolbar">
+        <div class="field-group compact-field">
+          <label for="analysis-month">Mês de análise</label>
+          <input id="analysis-month" type="month">
+        </div>
 
-    <section class="cards">
-
-      <div class="card">
-        <h3>Saldo Atual</h3>
-        <p id="current-balance">R$ 0,00</p>
+        <p class="summary-note">
+          Resumo calculado pelo <strong>vencimento</strong> do mês
+          <strong id="summary-period-label"></strong>.
+        </p>
       </div>
 
-      <div class="card">
-        <h3>Entradas</h3>
-        <p id="total-income">R$ 0,00</p>
-      </div>
+      <div class="cards">
+        <div class="card">
+          <h3>Saldo do Mês</h3>
+          <p id="current-balance" class="card-value">R$ 0,00</p>
+        </div>
 
-      <div class="card">
-        <h3>Saídas</h3>
-        <p id="total-expense">R$ 0,00</p>
-      </div>
+        <div class="card">
+          <h3>Entradas do Mês</h3>
+          <p id="total-income" class="card-value">R$ 0,00</p>
+        </div>
 
-      <div class="card">
-        <h3>Contas a Vencer</h3>
-        <p id="upcoming-bills">0</p>
-      </div>
+        <div class="card">
+          <h3>Saídas do Mês</h3>
+          <p id="total-expense" class="card-value">R$ 0,00</p>
+        </div>
 
-      <div class="card">
-        <h3>Contas Vencidas</h3>
-        <p id="overdue-bills">0</p>
-      </div>
+        <div class="card">
+          <h3>A Vencer no Mês</h3>
+          <p id="upcoming-bills" class="card-value">0</p>
+          <small class="card-caption">Contagem de saídas pendentes</small>
+        </div>
 
+        <div class="card">
+          <h3>Vencidas no Mês</h3>
+          <p id="overdue-bills" class="card-value">0</p>
+          <small class="card-caption">Contagem de saídas pendentes vencidas</small>
+        </div>
+      </div>
     </section>
 
     <section class="formulario">
@@ -52,6 +65,7 @@
           id="new-category"
           type="text"
           placeholder="Nome da nova categoria"
+          maxlength="60"
         >
 
         <button id="add-category-button" type="button">
@@ -61,10 +75,11 @@
     </section>
 
     <section class="formulario">
-      <h2>Novo Lançamento</h2>
+      <h2>Cadastrar Movimento Financeiro</h2>
+
+      <p id="form-feedback" class="form-feedback" aria-live="polite"></p>
 
       <form id="transaction-form">
-
         <div class="field-group">
           <label for="type">Tipo de movimento</label>
           <select id="type" required>
@@ -79,6 +94,7 @@
             id="description"
             type="text"
             placeholder="Ex.: Venda do dia, fornecedor, aluguel"
+            maxlength="120"
             required
           >
         </div>
@@ -86,9 +102,7 @@
         <div class="field-group">
           <label for="category">Categoria</label>
           <select id="category" required>
-            <option value="">
-              Selecione uma categoria
-            </option>
+            <option value="">Selecione uma categoria</option>
           </select>
         </div>
 
@@ -96,49 +110,46 @@
           <label for="amount">Valor</label>
           <input
             id="amount"
-            type="number"
-            placeholder="Ex.: 150.00"
-            step="0.01"
-            min="0"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="Ex.: 3.000,00"
+            aria-describedby="amount-help"
             required
           >
+          <small id="amount-help" class="field-help">
+            Aceita 3000, 3000,00 ou 3.000,00.
+          </small>
         </div>
 
         <div class="field-group">
           <label for="date">Data do Lançamento</label>
-          <input
-            id="date"
-            type="date"
-            required
-          >
+          <input id="date" type="date" required>
         </div>
 
         <div class="field-group">
           <label for="due-date">Data de Vencimento</label>
-          <input
-            id="due-date"
-            type="date"
-            required
-          >
+          <input id="due-date" type="date" required>
         </div>
 
         <div class="field-group">
           <label for="status">Status</label>
-          <select id="status" required>
-            <option value="pendente">Pendente</option>
-            <option value="pago">Pago</option>
-            <option value="recebido">Recebido</option>
-          </select>
+          <select id="status" required></select>
         </div>
 
-        <button id="submit-button" type="submit">
-          Adicionar lançamento
-        </button>
+        <div class="button-row">
+          <button id="submit-button" type="submit">
+            Salvar movimento
+          </button>
 
-        <button id="cancel-edit-button" type="button" class="secondary-button hidden">
-          Cancelar edição
-        </button>
-
+          <button
+            id="cancel-edit-button"
+            type="button"
+            class="secondary-button hidden"
+          >
+            Cancelar edição
+          </button>
+        </div>
       </form>
     </section>
 
@@ -160,6 +171,10 @@
           accept="application/json,.json"
         >
       </div>
+
+      <p class="section-description">
+        O backup exporta os dados no formato novo com valores em centavos.
+      </p>
     </section>
 
     <section class="formulario">
@@ -196,10 +211,7 @@
 
       <div class="field-group compact-field">
         <label for="cashflow-date">Data para consulta</label>
-        <input
-          id="cashflow-date"
-          type="date"
-        >
+        <input id="cashflow-date" type="date">
       </div>
 
       <div class="projection-cards cashflow-summary">
@@ -243,14 +255,13 @@
             </tr>
           </thead>
 
-          <tbody id="weekly-cashflow-body">
-          </tbody>
+          <tbody id="weekly-cashflow-body"></tbody>
         </table>
       </div>
     </section>
 
     <section class="formulario">
-      <h2>Resumo Visual</h2>
+      <h2>Resumo Visual do Mês</h2>
 
       <div class="charts-grid">
         <div class="chart-card">
@@ -266,7 +277,7 @@
     </section>
 
     <section class="formulario">
-      <h2>Relatório por Categoria</h2>
+      <h2>Relatório por Categoria no Mês</h2>
 
       <div class="report-table-wrapper">
         <table>
@@ -279,8 +290,7 @@
             </tr>
           </thead>
 
-          <tbody id="category-report-body">
-          </tbody>
+          <tbody id="category-report-body"></tbody>
         </table>
       </div>
     </section>
@@ -289,11 +299,8 @@
       <h2>Lançamentos</h2>
 
       <div class="filters">
-
         <select id="filter-category">
-          <option value="todos">
-            Todas as categorias
-          </option>
+          <option value="todos">Todas as categorias</option>
         </select>
 
         <select id="filter-type">
@@ -309,33 +316,29 @@
           <option value="recebido">Recebidos</option>
           <option value="vencido">Vencidos</option>
         </select>
-
       </div>
 
-      <table>
+      <div class="report-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Descrição</th>
+              <th>Categoria</th>
+              <th>Valor</th>
+              <th>Lançamento</th>
+              <th>Vencimento</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
 
-        <thead>
-          <tr>
-            <th>Tipo</th>
-            <th>Descrição</th>
-            <th>Categoria</th>
-            <th>Valor</th>
-            <th>Vencimento</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-
-        <tbody id="transactions-table-body">
-        </tbody>
-
-      </table>
-
+          <tbody id="transactions-table-body"></tbody>
+        </table>
+      </div>
     </section>
-
   </main>
 
   <script src="app.js"></script>
-
 </body>
 </html>

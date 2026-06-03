@@ -1,45 +1,18 @@
-const form = document.getElementById("transaction-form");
-const tableBody = document.getElementById("transactions-table-body");
+const STORAGE_KEYS = {
+  stateV2: "loja-vida-e-saude:state:v2",
+  legacyTransactions: "transactions",
+  legacyCategories: "categories",
+  migrationBackupV1: "loja-vida-e-saude:migration-backup:v1",
+  destructiveBackup: "loja-vida-e-saude:destructive-backup",
+};
 
-const currentBalanceElement = document.getElementById("current-balance");
-const totalIncomeElement = document.getElementById("total-income");
-const totalExpenseElement = document.getElementById("total-expense");
-const upcomingBillsElement = document.getElementById("upcoming-bills");
-const overdueBillsElement = document.getElementById("overdue-bills");
+const APP_INFO = {
+  appName: "Loja Vida e Saúde",
+  schemaVersion: 2,
+  backupVersion: "2.0.0",
+};
 
-const projectionTodayElement = document.getElementById("projection-today");
-const projection7DaysElement = document.getElementById("projection-7-days");
-const projection15DaysElement = document.getElementById("projection-15-days");
-const projection30DaysElement = document.getElementById("projection-30-days");
-
-const cashflowDateInput = document.getElementById("cashflow-date");
-const selectedDateIncomeElement = document.getElementById("selected-date-income");
-const selectedDateExpenseElement = document.getElementById("selected-date-expense");
-const selectedDateBalanceElement = document.getElementById("selected-date-balance");
-const selectedDatePendingExpenseElement = document.getElementById("selected-date-pending-expense");
-const weeklyCashflowBody = document.getElementById("weekly-cashflow-body");
-
-const categoryReportBody = document.getElementById("category-report-body");
-const incomeExpenseChart = document.getElementById("income-expense-chart");
-const expenseCategoryChart = document.getElementById("expense-category-chart");
-
-const submitButton = document.getElementById("submit-button");
-const cancelEditButton = document.getElementById("cancel-edit-button");
-
-const filterType = document.getElementById("filter-type");
-const filterCategory = document.getElementById("filter-category");
-const filterStatus = document.getElementById("filter-status");
-
-const categorySelect = document.getElementById("category");
-const newCategoryInput = document.getElementById("new-category");
-const addCategoryButton = document.getElementById("add-category-button");
-
-const exportBackupButton = document.getElementById("export-backup-button");
-const importBackupInput = document.getElementById("import-backup-input");
-
-let editingTransactionId = null;
-
-let categories = JSON.parse(localStorage.getItem("categories")) || [
+const DEFAULT_CATEGORIES = [
   "Vendas",
   "Mercadorias",
   "Aluguel",
@@ -53,102 +26,354 @@ let categories = JSON.parse(localStorage.getItem("categories")) || [
   "Outros",
 ];
 
-let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+const STATUS_LABELS = {
+  pendente: "Pendente",
+  pago: "Pago",
+  recebido: "Recebido",
+  vencido: "Vencido",
+};
 
-function saveTransactions() {
-  localStorage.setItem("transactions", JSON.stringify(transactions));
+const CURRENCY_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+const DECIMAL_INPUT_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const DOM = {
+  form: document.getElementById("transaction-form"),
+  formFeedback: document.getElementById("form-feedback"),
+
+  currentBalance: document.getElementById("current-balance"),
+  totalIncome: document.getElementById("total-income"),
+  totalExpense: document.getElementById("total-expense"),
+  upcomingBills: document.getElementById("upcoming-bills"),
+  overdueBills: document.getElementById("overdue-bills"),
+  summaryPeriodLabel: document.getElementById("summary-period-label"),
+  analysisMonth: document.getElementById("analysis-month"),
+
+  projectionToday: document.getElementById("projection-today"),
+  projection7Days: document.getElementById("projection-7-days"),
+  projection15Days: document.getElementById("projection-15-days"),
+  projection30Days: document.getElementById("projection-30-days"),
+
+  cashflowDate: document.getElementById("cashflow-date"),
+  selectedDateIncome: document.getElementById("selected-date-income"),
+  selectedDateExpense: document.getElementById("selected-date-expense"),
+  selectedDateBalance: document.getElementById("selected-date-balance"),
+  selectedDatePendingExpense: document.getElementById("selected-date-pending-expense"),
+  weeklyCashflowBody: document.getElementById("weekly-cashflow-body"),
+
+  categoryReportBody: document.getElementById("category-report-body"),
+  incomeExpenseChart: document.getElementById("income-expense-chart"),
+  expenseCategoryChart: document.getElementById("expense-category-chart"),
+
+  submitButton: document.getElementById("submit-button"),
+  cancelEditButton: document.getElementById("cancel-edit-button"),
+
+  filterType: document.getElementById("filter-type"),
+  filterCategory: document.getElementById("filter-category"),
+  filterStatus: document.getElementById("filter-status"),
+
+  type: document.getElementById("type"),
+  description: document.getElementById("description"),
+  category: document.getElementById("category"),
+  amount: document.getElementById("amount"),
+  date: document.getElementById("date"),
+  dueDate: document.getElementById("due-date"),
+  status: document.getElementById("status"),
+
+  transactionsTableBody: document.getElementById("transactions-table-body"),
+
+  newCategory: document.getElementById("new-category"),
+  addCategoryButton: document.getElementById("add-category-button"),
+
+  exportBackupButton: document.getElementById("export-backup-button"),
+  importBackupInput: document.getElementById("import-backup-input"),
+};
+
+let state = createEmptyState();
+let editingTransactionId = null;
+
+function createEmptyState() {
+  return {
+    schemaVersion: APP_INFO.schemaVersion,
+    categories: [...DEFAULT_CATEGORIES],
+    transactions: [],
+  };
 }
 
-function saveCategories() {
-  localStorage.setItem("categories", JSON.stringify(categories));
+function pad2(value) {
+  return String(value).padStart(2, "0");
 }
 
-function formatCurrency(value) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
+function localDateToISO(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
-function formatDateForInput(date) {
-  return date.toISOString().slice(0, 10);
+function getTodayISO() {
+  return localDateToISO(new Date());
 }
 
-function formatDateForDisplay(dateString) {
-  const date = parseDate(dateString);
-
-  return date.toLocaleDateString("pt-BR");
+function getCurrentMonthValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
 }
 
-function getSortedCategories() {
-  return [...categories].sort((a, b) => a.localeCompare(b, "pt-BR"));
+function isValidMonthValue(value) {
+  return /^\d{4}-\d{2}$/.test(value);
 }
 
-function getToday() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
+function getMonthBounds(monthValue) {
+  if (!isValidMonthValue(monthValue)) {
+    throw new Error("Mês inválido.");
+  }
+
+  const [year, month] = monthValue.split("-").map(Number);
+  const lastDayDate = new Date(year, month, 0);
+
+  return {
+    startISO: `${year}-${pad2(month)}-01`,
+    endISO: `${year}-${pad2(month)}-${pad2(lastDayDate.getDate())}`,
+  };
 }
 
-function addDays(baseDate, days) {
-  const date = new Date(baseDate);
+function parseISODateParts(isoDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    return null;
+  }
+
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  const isValid =
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day;
+
+  if (!isValid) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
+function isValidISODate(isoDate) {
+  return Boolean(parseISODateParts(isoDate));
+}
+
+function normalizeISODateString(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (isValidISODate(trimmed)) {
+    return trimmed;
+  }
+
+  const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (brMatch) {
+    const [, day, month, year] = brMatch;
+    const iso = `${year}-${month}-${day}`;
+    return isValidISODate(iso) ? iso : null;
+  }
+
+  return null;
+}
+
+function formatISODateForDisplay(isoDate) {
+  const parts = parseISODateParts(isoDate);
+
+  if (!parts) {
+    return "Data inválida";
+  }
+
+  return `${pad2(parts.day)}/${pad2(parts.month)}/${parts.year}`;
+}
+
+function addDaysToISO(baseISO, days) {
+  const parts = parseISODateParts(baseISO);
+
+  if (!parts) {
+    throw new Error("Data base inválida.");
+  }
+
+  // Usamos meio-dia local para evitar armadilhas em transições de horário.
+  const date = new Date(parts.year, parts.month - 1, parts.day, 12, 0, 0, 0);
   date.setDate(date.getDate() + days);
-  return date;
+
+  return localDateToISO(date);
 }
 
-function parseDate(dateString) {
-  return new Date(dateString + "T00:00:00");
+function compareISODate(a, b) {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
 }
 
-function isSameDate(dateString, targetDate) {
-  return formatDateForInput(parseDate(dateString)) === formatDateForInput(targetDate);
+function formatCents(amountCents) {
+  return CURRENCY_FORMATTER.format((amountCents || 0) / 100);
 }
 
-function setDefaultDates() {
-  const todayAsText = formatDateForInput(getToday());
+function formatCentsForInput(amountCents) {
+  return DECIMAL_INPUT_FORMATTER.format((amountCents || 0) / 100);
+}
 
-  document.getElementById("date").value = todayAsText;
-  document.getElementById("due-date").value = todayAsText;
+function parseMoneyToCents(input) {
+  if (typeof input === "number" && Number.isFinite(input)) {
+    return Math.round(input * 100);
+  }
 
-  if (!cashflowDateInput.value) {
-    cashflowDateInput.value = todayAsText;
+  if (typeof input !== "string") {
+    throw new Error("Valor monetário inválido.");
+  }
+
+  let value = input.trim();
+
+  if (!value) {
+    throw new Error("Informe o valor.");
+  }
+
+  value = value.replace(/\s+/g, "").replace(/^R\$/i, "");
+
+  if (value.startsWith("-")) {
+    throw new Error("Use o tipo Entrada/Saída; não informe valor negativo.");
+  }
+
+  if (!/^[\d.,]+$/.test(value)) {
+    throw new Error("Use apenas números, vírgula e ponto.");
+  }
+
+  const commaCount = (value.match(/,/g) || []).length;
+  const dotCount = (value.match(/\./g) || []).length;
+  let normalized = value;
+
+  if (commaCount > 0 && dotCount > 0) {
+    // Quando há os dois separadores, o último é tratado como separador decimal.
+    if (value.lastIndexOf(",") > value.lastIndexOf(".")) {
+      normalized = value.replace(/\./g, "").replace(",", ".");
+    } else {
+      normalized = value.replace(/,/g, "");
+    }
+  } else if (commaCount === 1 && dotCount === 0) {
+    const [intPart, fracPart] = value.split(",");
+
+    if (fracPart.length > 2) {
+      throw new Error("Use no máximo 2 casas decimais.");
+    }
+
+    normalized = `${intPart}.${fracPart}`;
+  } else if (commaCount === 0 && dotCount === 1) {
+    const [intPart, fracPart] = value.split(".");
+
+    if (fracPart.length <= 2) {
+      normalized = value;
+    } else if (fracPart.length === 3 && /^\d{1,3}$/.test(intPart)) {
+      // Ex.: 3.000 => 3000
+      normalized = `${intPart}${fracPart}`;
+    } else {
+      throw new Error("Formato numérico inválido.");
+    }
+  } else if (commaCount === 0 && dotCount > 1) {
+    const groups = value.split(".");
+
+    const looksLikeThousands = groups.every((group, index) => {
+      if (index === 0) {
+        return /^\d{1,3}$/.test(group);
+      }
+      return /^\d{3}$/.test(group);
+    });
+
+    if (!looksLikeThousands) {
+      throw new Error("Formato numérico inválido.");
+    }
+
+    normalized = groups.join("");
+  } else if (commaCount > 1 && dotCount === 0) {
+    throw new Error("Formato numérico inválido.");
+  }
+
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
+    throw new Error("Use no máximo 2 casas decimais.");
+  }
+
+  const [wholePart, fractionPart = ""] = normalized.split(".");
+  const cents =
+    Number(wholePart) * 100 + Number(fractionPart.padEnd(2, "0").slice(0, 2));
+
+  if (!Number.isSafeInteger(cents)) {
+    throw new Error("Valor muito alto para ser processado.");
+  }
+
+  return cents;
+}
+
+function sumAmountCents(items) {
+  return items.reduce((sum, item) => sum + item.amountCents, 0);
+}
+
+function getAllowedStatusesForType(type) {
+  if (type === "entrada") {
+    return ["pendente", "recebido"];
+  }
+
+  return ["pendente", "pago"];
+}
+
+function normalizeStatus(type, status) {
+  const allowed = getAllowedStatusesForType(type);
+
+  if (allowed.includes(status)) {
+    return status;
+  }
+
+  if (type === "entrada" && status === "pago") {
+    return "recebido";
+  }
+
+  if (type === "saida" && status === "recebido") {
+    return "pago";
+  }
+
+  return "pendente";
+}
+
+function getStatusLabel(status) {
+  return STATUS_LABELS[status] || status;
+}
+
+function updateStatusOptions(preferredStatus = null) {
+  const type = DOM.type.value;
+  const allowedStatuses = getAllowedStatusesForType(type);
+  const currentStatus = preferredStatus || DOM.status.value || allowedStatuses[0];
+
+  DOM.status.innerHTML = "";
+
+  allowedStatuses.forEach((status) => {
+    const option = document.createElement("option");
+    option.value = status;
+    option.textContent = getStatusLabel(status);
+    DOM.status.appendChild(option);
+  });
+
+  if (allowedStatuses.includes(currentStatus)) {
+    DOM.status.value = currentStatus;
+  } else {
+    DOM.status.value = allowedStatuses[0];
   }
 }
 
-function renderCategories() {
-  categorySelect.innerHTML = `
-    <option value="">
-      Selecione uma categoria
-    </option>
-  `;
-
-  filterCategory.innerHTML = `
-    <option value="todos">
-      Todas as categorias
-    </option>
-  `;
-
-  getSortedCategories().forEach((category) => {
-    const categoryOption = document.createElement("option");
-    categoryOption.value = category;
-    categoryOption.textContent = category;
-    categorySelect.appendChild(categoryOption);
-
-    const filterOption = document.createElement("option");
-    filterOption.value = category;
-    filterOption.textContent = category;
-    filterCategory.appendChild(filterOption);
-  });
-}
-
 function getDisplayStatus(transaction) {
-  const today = getToday();
-  const dueDate = parseDate(transaction.dueDate);
+  const todayISO = getTodayISO();
 
   if (
     transaction.type === "saida" &&
     transaction.status === "pendente" &&
-    dueDate < today
+    transaction.dueDate < todayISO
   ) {
     return "vencido";
   }
@@ -156,317 +381,671 @@ function getDisplayStatus(transaction) {
   return transaction.status;
 }
 
-function calculateTotalByType(type) {
-  return transactions
-    .filter((transaction) => transaction.type === type)
-    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+function getCategoryListFromState() {
+  return [...new Set(state.categories.map((category) => category.trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
-function calculateProjectedBalance(daysAhead) {
-  const targetDate = addDays(getToday(), daysAhead);
+function safeReadJson(key) {
+  const value = localStorage.getItem(key);
 
-  return transactions.reduce((balance, transaction) => {
-    const dueDate = parseDate(transaction.dueDate);
+  if (!value) {
+    return null;
+  }
 
-    if (dueDate > targetDate) {
-      return balance;
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    console.error(`Não foi possível ler o JSON da chave ${key}.`, error);
+    return null;
+  }
+}
+
+function saveCurrentState() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.stateV2, JSON.stringify(state));
+  } catch (error) {
+    if (error && error.name === "QuotaExceededError") {
+      alert(
+        "O armazenamento local atingiu o limite do navegador. " +
+        "Exporte um backup e remova lançamentos antigos."
+      );
+      return;
     }
 
-    if (transaction.type === "entrada") {
-      return balance + Number(transaction.amount);
+    throw error;
+  }
+}
+
+function backupBeforeDestructiveChange(reason) {
+  const backup = {
+    reason,
+    createdAtISO: new Date().toISOString(),
+    state,
+  };
+
+  try {
+    localStorage.setItem(STORAGE_KEYS.destructiveBackup, JSON.stringify(backup));
+  } catch (error) {
+    console.warn("Não foi possível salvar backup de segurança antes da alteração.", error);
+  }
+}
+
+function generateTransactionId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return `tx-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function normalizeDescription(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function normalizeCategoryName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function normalizeTransactionFromAnySchema(rawTransaction) {
+  if (!rawTransaction || typeof rawTransaction !== "object") {
+    return null;
+  }
+
+  const type = rawTransaction.type === "entrada" ? "entrada" : rawTransaction.type === "saida" ? "saida" : null;
+  const description = normalizeDescription(rawTransaction.description);
+  const category = normalizeCategoryName(rawTransaction.category);
+
+  if (!type || !description || !category) {
+    return null;
+  }
+
+  let amountCents = null;
+
+  if (Number.isInteger(rawTransaction.amountCents)) {
+    amountCents = rawTransaction.amountCents;
+  } else if (typeof rawTransaction.amount === "number" && Number.isFinite(rawTransaction.amount)) {
+    amountCents = Math.round(rawTransaction.amount * 100);
+  } else if (typeof rawTransaction.amount === "string") {
+    try {
+      amountCents = parseMoneyToCents(rawTransaction.amount);
+    } catch (error) {
+      amountCents = null;
     }
+  }
 
-    return balance - Number(transaction.amount);
-  }, 0);
-}
+  const date = normalizeISODateString(rawTransaction.date || rawTransaction.dateISO);
+  const dueDate = normalizeISODateString(rawTransaction.dueDate || rawTransaction.dueDateISO);
 
-function getTransactionsByDueDate(targetDate) {
-  return transactions.filter((transaction) =>
-    isSameDate(transaction.dueDate, targetDate)
-  );
-}
-
-function calculateDailySummary(targetDate) {
-  const transactionsOfDay = getTransactionsByDueDate(targetDate);
-
-  const income = transactionsOfDay
-    .filter((transaction) => transaction.type === "entrada")
-    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-
-  const expense = transactionsOfDay
-    .filter((transaction) => transaction.type === "saida")
-    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-
-  const pendingExpense = transactionsOfDay
-    .filter(
-      (transaction) =>
-        transaction.type === "saida" && transaction.status === "pendente"
-    )
-    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  if (!Number.isInteger(amountCents) || amountCents <= 0 || !date || !dueDate) {
+    return null;
+  }
 
   return {
-    income,
-    expense,
-    pendingExpense,
-    balance: income - expense,
+    id:
+      typeof rawTransaction.id === "string" && rawTransaction.id.trim()
+        ? rawTransaction.id.trim()
+        : generateTransactionId(),
+    type,
+    description,
+    category,
+    amountCents,
+    date,
+    dueDate,
+    status: normalizeStatus(type, rawTransaction.status),
   };
 }
 
-function renderSelectedDateCashflow() {
-  const selectedDate = cashflowDateInput.value
-    ? parseDate(cashflowDateInput.value)
-    : getToday();
+function migrateLegacyStateIfNeeded() {
+  const currentV2State = safeReadJson(STORAGE_KEYS.stateV2);
 
-  const summary = calculateDailySummary(selectedDate);
+  if (currentV2State && currentV2State.schemaVersion === APP_INFO.schemaVersion) {
+    const normalizedTransactions = (currentV2State.transactions || [])
+      .map(normalizeTransactionFromAnySchema)
+      .filter(Boolean);
 
-  selectedDateIncomeElement.textContent = formatCurrency(summary.income);
-  selectedDateExpenseElement.textContent = formatCurrency(summary.expense);
-  selectedDateBalanceElement.textContent = formatCurrency(summary.balance);
-  selectedDatePendingExpenseElement.textContent = formatCurrency(summary.pendingExpense);
-}
+    const normalizedCategories = [
+      ...new Set([
+        ...DEFAULT_CATEGORIES,
+        ...(currentV2State.categories || []).map(normalizeCategoryName).filter(Boolean),
+        ...normalizedTransactions.map((transaction) => transaction.category),
+      ]),
+    ].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-function renderWeeklyCashflow() {
-  weeklyCashflowBody.innerHTML = "";
-
-  const today = getToday();
-
-  for (let index = 0; index < 7; index++) {
-    const currentDate = addDays(today, index);
-    const summary = calculateDailySummary(currentDate);
-
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${formatDateForDisplay(formatDateForInput(currentDate))}</td>
-      <td>${formatCurrency(summary.income)}</td>
-      <td>${formatCurrency(summary.expense)}</td>
-      <td>${formatCurrency(summary.pendingExpense)}</td>
-      <td>${formatCurrency(summary.balance)}</td>
-    `;
-
-    weeklyCashflowBody.appendChild(row);
-  }
-}
-
-function updateDashboard() {
-  const totalIncome = calculateTotalByType("entrada");
-  const totalExpense = calculateTotalByType("saida");
-  const currentBalance = totalIncome - totalExpense;
-
-  const today = getToday();
-  const sevenDaysFromNow = addDays(today, 7);
-
-  const upcomingBills = transactions.filter((transaction) => {
-    if (transaction.type !== "saida") return false;
-    if (transaction.status !== "pendente") return false;
-
-    const dueDate = parseDate(transaction.dueDate);
-
-    return dueDate >= today && dueDate <= sevenDaysFromNow;
-  }).length;
-
-  const overdueBills = transactions.filter((transaction) => {
-    if (transaction.type !== "saida") return false;
-    if (transaction.status !== "pendente") return false;
-
-    const dueDate = parseDate(transaction.dueDate);
-
-    return dueDate < today;
-  }).length;
-
-  currentBalanceElement.textContent = formatCurrency(currentBalance);
-  totalIncomeElement.textContent = formatCurrency(totalIncome);
-  totalExpenseElement.textContent = formatCurrency(totalExpense);
-  upcomingBillsElement.textContent = upcomingBills;
-  overdueBillsElement.textContent = overdueBills;
-
-  projectionTodayElement.textContent = formatCurrency(calculateProjectedBalance(0));
-  projection7DaysElement.textContent = formatCurrency(calculateProjectedBalance(7));
-  projection15DaysElement.textContent = formatCurrency(calculateProjectedBalance(15));
-  projection30DaysElement.textContent = formatCurrency(calculateProjectedBalance(30));
-}
-
-function addTransactionToTable(transaction) {
-  const displayStatus = getDisplayStatus(transaction);
-  const row = document.createElement("tr");
-
-  if (displayStatus === "vencido") {
-    row.style.backgroundColor = "#ffe5e5";
+    return {
+      schemaVersion: APP_INFO.schemaVersion,
+      categories: normalizedCategories,
+      transactions: normalizedTransactions,
+    };
   }
 
-  row.innerHTML = `
-    <td>${transaction.type}</td>
-    <td>${transaction.description}</td>
-    <td>${transaction.category}</td>
-    <td>${formatCurrency(Number(transaction.amount))}</td>
-    <td>${formatDateForDisplay(transaction.dueDate)}</td>
-    <td>${displayStatus}</td>
-    <td>
-      <button class="edit-button" data-id="${transaction.id}">
-        Editar
-      </button>
+  const legacyTransactionsRaw = localStorage.getItem(STORAGE_KEYS.legacyTransactions);
+  const legacyCategoriesRaw = localStorage.getItem(STORAGE_KEYS.legacyCategories);
 
-      <button class="delete-button" data-id="${transaction.id}">
-        Excluir
-      </button>
-    </td>
-  `;
+  if (!legacyTransactionsRaw && !legacyCategoriesRaw) {
+    return createEmptyState();
+  }
 
-  tableBody.appendChild(row);
+  const legacyBackupPayload = {
+    createdAtISO: new Date().toISOString(),
+    legacyTransactionsRaw,
+    legacyCategoriesRaw,
+  };
+
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.migrationBackupV1,
+      JSON.stringify(legacyBackupPayload)
+    );
+  } catch (error) {
+    console.warn("Não foi possível salvar o backup da migração.", error);
+  }
+
+  const legacyTransactions = safeReadJson(STORAGE_KEYS.legacyTransactions) || [];
+  const legacyCategories = safeReadJson(STORAGE_KEYS.legacyCategories) || [];
+
+  const normalizedTransactions = legacyTransactions
+    .map(normalizeTransactionFromAnySchema)
+    .filter(Boolean);
+
+  const normalizedCategories = [
+    ...new Set([
+      ...DEFAULT_CATEGORIES,
+      ...legacyCategories.map(normalizeCategoryName).filter(Boolean),
+      ...normalizedTransactions.map((transaction) => transaction.category),
+    ]),
+  ].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  const migratedState = {
+    schemaVersion: APP_INFO.schemaVersion,
+    categories: normalizedCategories,
+    transactions: normalizedTransactions,
+  };
+
+  state = migratedState;
+  saveCurrentState();
+
+  return migratedState;
+}
+
+function loadState() {
+  state = migrateLegacyStateIfNeeded();
+}
+
+function buildTransactionFromForm() {
+  const description = normalizeDescription(DOM.description.value);
+  const category = normalizeCategoryName(DOM.category.value);
+  const date = normalizeISODateString(DOM.date.value);
+  const dueDate = normalizeISODateString(DOM.dueDate.value);
+  const type = DOM.type.value;
+  const status = normalizeStatus(type, DOM.status.value);
+
+  if (!description) {
+    throw new Error("Informe a descrição.");
+  }
+
+  if (!category) {
+    throw new Error("Selecione uma categoria.");
+  }
+
+  if (!date) {
+    throw new Error("Informe a data do lançamento.");
+  }
+
+  if (!dueDate) {
+    throw new Error("Informe a data de vencimento.");
+  }
+
+  const amountCents = parseMoneyToCents(DOM.amount.value);
+
+  if (amountCents <= 0) {
+    throw new Error("O valor deve ser maior que zero.");
+  }
+
+  return {
+    id: editingTransactionId || generateTransactionId(),
+    type,
+    description,
+    category,
+    amountCents,
+    date,
+    dueDate,
+    status,
+  };
+}
+
+function isValidTransactionV2(transaction) {
+  if (!transaction || typeof transaction !== "object") {
+    return false;
+  }
+
+  const allowedStatuses = getAllowedStatusesForType(transaction.type);
+
+  return (
+    typeof transaction.id === "string" &&
+    ["entrada", "saida"].includes(transaction.type) &&
+    typeof transaction.description === "string" &&
+    transaction.description.trim().length > 0 &&
+    typeof transaction.category === "string" &&
+    transaction.category.trim().length > 0 &&
+    Number.isInteger(transaction.amountCents) &&
+    transaction.amountCents > 0 &&
+    isValidISODate(transaction.date) &&
+    isValidISODate(transaction.dueDate) &&
+    allowedStatuses.includes(transaction.status)
+  );
+}
+
+function normalizeBackupPayload(rawBackup) {
+  if (!rawBackup || typeof rawBackup !== "object") {
+    throw new Error("Arquivo de backup inválido.");
+  }
+
+  // Backup novo.
+  if (
+    rawBackup.schemaVersion === APP_INFO.schemaVersion &&
+    Array.isArray(rawBackup.transactions) &&
+    Array.isArray(rawBackup.categories)
+  ) {
+    const normalizedTransactions = rawBackup.transactions
+      .map(normalizeTransactionFromAnySchema)
+      .filter(Boolean);
+
+    const normalizedCategories = [
+      ...new Set([
+        ...DEFAULT_CATEGORIES,
+        ...rawBackup.categories.map(normalizeCategoryName).filter(Boolean),
+        ...normalizedTransactions.map((transaction) => transaction.category),
+      ]),
+    ].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    const normalizedState = {
+      schemaVersion: APP_INFO.schemaVersion,
+      categories: normalizedCategories,
+      transactions: normalizedTransactions,
+    };
+
+    if (!normalizedState.transactions.every(isValidTransactionV2)) {
+      throw new Error("Backup contém lançamentos inválidos.");
+    }
+
+    return normalizedState;
+  }
+
+  // Backup legado.
+  if (Array.isArray(rawBackup.transactions) && Array.isArray(rawBackup.categories)) {
+    const normalizedTransactions = rawBackup.transactions
+      .map(normalizeTransactionFromAnySchema)
+      .filter(Boolean);
+
+    const normalizedCategories = [
+      ...new Set([
+        ...DEFAULT_CATEGORIES,
+        ...rawBackup.categories.map(normalizeCategoryName).filter(Boolean),
+        ...normalizedTransactions.map((transaction) => transaction.category),
+      ]),
+    ].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    return {
+      schemaVersion: APP_INFO.schemaVersion,
+      categories: normalizedCategories,
+      transactions: normalizedTransactions,
+    };
+  }
+
+  throw new Error("Estrutura de backup não reconhecida.");
+}
+
+function getTransactionsForAnalysisMonth() {
+  const monthValue = DOM.analysisMonth.value || getCurrentMonthValue();
+  const { startISO, endISO } = getMonthBounds(monthValue);
+
+  return state.transactions.filter(
+    (transaction) =>
+      transaction.dueDate >= startISO && transaction.dueDate <= endISO
+  );
+}
+
+function calculateSummaryForMonth() {
+  const monthTransactions = getTransactionsForAnalysisMonth();
+  const totalIncomeCents = sumAmountCents(
+    monthTransactions.filter((transaction) => transaction.type === "entrada")
+  );
+  const totalExpenseCents = sumAmountCents(
+    monthTransactions.filter((transaction) => transaction.type === "saida")
+  );
+  const balanceCents = totalIncomeCents - totalExpenseCents;
+  const todayISO = getTodayISO();
+
+  const upcomingBillsCount = monthTransactions.filter((transaction) => {
+    return (
+      transaction.type === "saida" &&
+      transaction.status === "pendente" &&
+      transaction.dueDate >= todayISO
+    );
+  }).length;
+
+  const overdueBillsCount = monthTransactions.filter((transaction) => {
+    return (
+      transaction.type === "saida" &&
+      transaction.status === "pendente" &&
+      transaction.dueDate < todayISO
+    );
+  }).length;
+
+  return {
+    totalIncomeCents,
+    totalExpenseCents,
+    balanceCents,
+    upcomingBillsCount,
+    overdueBillsCount,
+  };
+}
+
+function calculateProjectedBalance(daysAhead) {
+  const targetISO = addDaysToISO(getTodayISO(), daysAhead);
+
+  return state.transactions.reduce((balanceCents, transaction) => {
+    if (compareISODate(transaction.dueDate, targetISO) > 0) {
+      return balanceCents;
+    }
+
+    if (transaction.type === "entrada") {
+      return balanceCents + transaction.amountCents;
+    }
+
+    return balanceCents - transaction.amountCents;
+  }, 0);
+}
+
+function getTransactionsByDueDate(targetISO) {
+  return state.transactions.filter((transaction) => transaction.dueDate === targetISO);
+}
+
+function calculateDailySummary(targetISO) {
+  const transactionsOfDay = getTransactionsByDueDate(targetISO);
+
+  const incomeCents = sumAmountCents(
+    transactionsOfDay.filter((transaction) => transaction.type === "entrada")
+  );
+
+  const expenseCents = sumAmountCents(
+    transactionsOfDay.filter((transaction) => transaction.type === "saida")
+  );
+
+  const pendingExpenseCents = sumAmountCents(
+    transactionsOfDay.filter(
+      (transaction) =>
+        transaction.type === "saida" && transaction.status === "pendente"
+    )
+  );
+
+  return {
+    incomeCents,
+    expenseCents,
+    pendingExpenseCents,
+    balanceCents: incomeCents - expenseCents,
+  };
 }
 
 function getFilteredTransactions() {
-  let filteredTransactions = [...transactions];
+  let filtered = [...state.transactions];
 
-  if (filterType.value !== "all") {
-    filteredTransactions = filteredTransactions.filter(
-      (transaction) => transaction.type === filterType.value
+  if (DOM.filterType.value !== "all") {
+    filtered = filtered.filter((transaction) => transaction.type === DOM.filterType.value);
+  }
+
+  if (DOM.filterCategory.value !== "todos") {
+    filtered = filtered.filter(
+      (transaction) => transaction.category === DOM.filterCategory.value
     );
   }
 
-  if (filterCategory.value !== "todos") {
-    filteredTransactions = filteredTransactions.filter(
-      (transaction) => transaction.category === filterCategory.value
+  if (DOM.filterStatus.value !== "todos") {
+    filtered = filtered.filter(
+      (transaction) => getDisplayStatus(transaction) === DOM.filterStatus.value
     );
   }
 
-  if (filterStatus.value !== "todos") {
-    filteredTransactions = filteredTransactions.filter(
-      (transaction) => getDisplayStatus(transaction) === filterStatus.value
-    );
-  }
+  return filtered.sort((a, b) => {
+    const byDueDate = compareISODate(a.dueDate, b.dueDate);
 
-  return filteredTransactions;
+    if (byDueDate !== 0) {
+      return byDueDate;
+    }
+
+    const byDate = compareISODate(a.date, b.date);
+
+    if (byDate !== 0) {
+      return byDate;
+    }
+
+    return a.description.localeCompare(b.description, "pt-BR");
+  });
 }
 
-function renderTransactions() {
-  tableBody.innerHTML = "";
+function clearElementChildren(element) {
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+}
 
-  const filteredTransactions = getFilteredTransactions();
+function appendTextCell(row, text) {
+  const cell = document.createElement("td");
+  cell.textContent = text;
+  row.appendChild(cell);
+  return cell;
+}
 
-  filteredTransactions.forEach((transaction) => {
-    addTransactionToTable(transaction);
+function renderCategories() {
+  const selectedCategory = DOM.category.value;
+  const selectedFilterCategory = DOM.filterCategory.value;
+  const categories = getCategoryListFromState();
+
+  DOM.category.innerHTML = "";
+  DOM.filterCategory.innerHTML = "";
+
+  const formPlaceholder = document.createElement("option");
+  formPlaceholder.value = "";
+  formPlaceholder.textContent = "Selecione uma categoria";
+  DOM.category.appendChild(formPlaceholder);
+
+  const filterPlaceholder = document.createElement("option");
+  filterPlaceholder.value = "todos";
+  filterPlaceholder.textContent = "Todas as categorias";
+  DOM.filterCategory.appendChild(filterPlaceholder);
+
+  categories.forEach((category) => {
+    const categoryOption = document.createElement("option");
+    categoryOption.value = category;
+    categoryOption.textContent = category;
+    DOM.category.appendChild(categoryOption);
+
+    const filterOption = document.createElement("option");
+    filterOption.value = category;
+    filterOption.textContent = category;
+    DOM.filterCategory.appendChild(filterOption);
   });
 
-  updateDashboard();
-  renderSelectedDateCashflow();
-  renderWeeklyCashflow();
-  renderCategoryReport();
-  renderCharts();
+  if (categories.includes(selectedCategory)) {
+    DOM.category.value = selectedCategory;
+  }
+
+  if (selectedFilterCategory === "todos" || categories.includes(selectedFilterCategory)) {
+    DOM.filterCategory.value = selectedFilterCategory;
+  } else {
+    DOM.filterCategory.value = "todos";
+  }
+}
+
+function renderDashboard() {
+  const summary = calculateSummaryForMonth();
+  const monthValue = DOM.analysisMonth.value || getCurrentMonthValue();
+  const [year, month] = monthValue.split("-");
+  DOM.summaryPeriodLabel.textContent = `${month}/${year}`;
+
+  DOM.currentBalance.textContent = formatCents(summary.balanceCents);
+  DOM.totalIncome.textContent = formatCents(summary.totalIncomeCents);
+  DOM.totalExpense.textContent = formatCents(summary.totalExpenseCents);
+  DOM.upcomingBills.textContent = String(summary.upcomingBillsCount);
+  DOM.overdueBills.textContent = String(summary.overdueBillsCount);
+
+  DOM.projectionToday.textContent = formatCents(calculateProjectedBalance(0));
+  DOM.projection7Days.textContent = formatCents(calculateProjectedBalance(7));
+  DOM.projection15Days.textContent = formatCents(calculateProjectedBalance(15));
+  DOM.projection30Days.textContent = formatCents(calculateProjectedBalance(30));
+}
+
+function renderSelectedDateCashflow() {
+  const selectedISO = normalizeISODateString(DOM.cashflowDate.value) || getTodayISO();
+  const summary = calculateDailySummary(selectedISO);
+
+  DOM.selectedDateIncome.textContent = formatCents(summary.incomeCents);
+  DOM.selectedDateExpense.textContent = formatCents(summary.expenseCents);
+  DOM.selectedDateBalance.textContent = formatCents(summary.balanceCents);
+  DOM.selectedDatePendingExpense.textContent = formatCents(summary.pendingExpenseCents);
+}
+
+function renderWeeklyCashflow() {
+  clearElementChildren(DOM.weeklyCashflowBody);
+
+  const startISO = getTodayISO();
+
+  for (let index = 0; index < 7; index += 1) {
+    const currentISO = addDaysToISO(startISO, index);
+    const summary = calculateDailySummary(currentISO);
+    const row = document.createElement("tr");
+
+    appendTextCell(row, formatISODateForDisplay(currentISO));
+    appendTextCell(row, formatCents(summary.incomeCents));
+    appendTextCell(row, formatCents(summary.expenseCents));
+    appendTextCell(row, formatCents(summary.pendingExpenseCents));
+    appendTextCell(row, formatCents(summary.balanceCents));
+
+    DOM.weeklyCashflowBody.appendChild(row);
+  }
 }
 
 function renderCategoryReport() {
-  categoryReportBody.innerHTML = "";
+  clearElementChildren(DOM.categoryReportBody);
 
-  const report = {};
+  const reportTransactions = getTransactionsForAnalysisMonth();
+  const reportByCategory = {};
 
-  transactions.forEach((transaction) => {
-    if (!report[transaction.category]) {
-      report[transaction.category] = {
-        income: 0,
-        expense: 0,
+  reportTransactions.forEach((transaction) => {
+    if (!reportByCategory[transaction.category]) {
+      reportByCategory[transaction.category] = {
+        incomeCents: 0,
+        expenseCents: 0,
       };
     }
 
     if (transaction.type === "entrada") {
-      report[transaction.category].income += Number(transaction.amount);
+      reportByCategory[transaction.category].incomeCents += transaction.amountCents;
     } else {
-      report[transaction.category].expense += Number(transaction.amount);
+      reportByCategory[transaction.category].expenseCents += transaction.amountCents;
     }
   });
 
-  const sortedCategoryNames = Object.keys(report).sort((a, b) =>
+  const categoryNames = Object.keys(reportByCategory).sort((a, b) =>
     a.localeCompare(b, "pt-BR")
   );
 
-  if (sortedCategoryNames.length === 0) {
-    categoryReportBody.innerHTML = `
-      <tr>
-        <td colspan="4" class="empty-state">
-          Nenhum lançamento cadastrado.
-        </td>
-      </tr>
-    `;
+  if (categoryNames.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 4;
+    cell.className = "empty-state";
+    cell.textContent = "Nenhum lançamento no mês selecionado.";
+    row.appendChild(cell);
+    DOM.categoryReportBody.appendChild(row);
     return;
   }
 
-  sortedCategoryNames.forEach((category) => {
-    const income = report[category].income;
-    const expense = report[category].expense;
-    const balance = income - expense;
-
+  categoryNames.forEach((category) => {
     const row = document.createElement("tr");
+    const incomeCents = reportByCategory[category].incomeCents;
+    const expenseCents = reportByCategory[category].expenseCents;
+    const balanceCents = incomeCents - expenseCents;
 
-    row.innerHTML = `
-      <td>${category}</td>
-      <td>${formatCurrency(income)}</td>
-      <td>${formatCurrency(expense)}</td>
-      <td>${formatCurrency(balance)}</td>
-    `;
+    appendTextCell(row, category);
+    appendTextCell(row, formatCents(incomeCents));
+    appendTextCell(row, formatCents(expenseCents));
+    appendTextCell(row, formatCents(balanceCents));
 
-    categoryReportBody.appendChild(row);
+    DOM.categoryReportBody.appendChild(row);
   });
 }
 
 function renderBarChart(container, items) {
-  container.innerHTML = "";
+  clearElementChildren(container);
 
   if (items.length === 0) {
-    container.innerHTML = `
-      <p class="empty-state">
-        Nenhum dado disponível.
-      </p>
-    `;
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "Nenhum dado disponível para o mês selecionado.";
+    container.appendChild(empty);
     return;
   }
 
   const maxValue = Math.max(...items.map((item) => item.value));
 
   items.forEach((item) => {
-    const percentage = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-
     const row = document.createElement("div");
     row.className = "chart-row";
 
-    row.innerHTML = `
-      <div class="chart-label">
-        <span>${item.label}</span>
-        <strong>${formatCurrency(item.value)}</strong>
-      </div>
+    const label = document.createElement("div");
+    label.className = "chart-label";
 
-      <div class="chart-track">
-        <div class="chart-bar ${item.type === "expense" ? "expense" : ""}" style="width: ${percentage}%"></div>
-      </div>
-    `;
+    const labelText = document.createElement("span");
+    labelText.textContent = item.label;
 
+    const labelValue = document.createElement("strong");
+    labelValue.textContent = formatCents(item.value);
+
+    label.appendChild(labelText);
+    label.appendChild(labelValue);
+
+    const track = document.createElement("div");
+    track.className = "chart-track";
+
+    const bar = document.createElement("div");
+    bar.className = `chart-bar ${item.type === "expense" ? "expense" : ""}`.trim();
+    bar.style.width = `${maxValue === 0 ? 0 : (item.value / maxValue) * 100}%`;
+
+    track.appendChild(bar);
+    row.appendChild(label);
+    row.appendChild(track);
     container.appendChild(row);
   });
 }
 
 function renderCharts() {
-  const totalIncome = calculateTotalByType("entrada");
-  const totalExpense = calculateTotalByType("saida");
+  const reportTransactions = getTransactionsForAnalysisMonth();
 
-  renderBarChart(incomeExpenseChart, [
-    {
-      label: "Entradas",
-      value: totalIncome,
-      type: "income",
-    },
-    {
-      label: "Saídas",
-      value: totalExpense,
-      type: "expense",
-    },
-  ].filter((item) => item.value > 0));
+  const totalIncomeCents = sumAmountCents(
+    reportTransactions.filter((transaction) => transaction.type === "entrada")
+  );
+
+  const totalExpenseCents = sumAmountCents(
+    reportTransactions.filter((transaction) => transaction.type === "saida")
+  );
+
+  renderBarChart(
+    DOM.incomeExpenseChart,
+    [
+      { label: "Entradas", value: totalIncomeCents, type: "income" },
+      { label: "Saídas", value: totalExpenseCents, type: "expense" },
+    ].filter((item) => item.value > 0)
+  );
 
   const expenseByCategory = {};
 
-  transactions
+  reportTransactions
     .filter((transaction) => transaction.type === "saida")
     .forEach((transaction) => {
       expenseByCategory[transaction.category] =
-        (expenseByCategory[transaction.category] || 0) + Number(transaction.amount);
+        (expenseByCategory[transaction.category] || 0) + transaction.amountCents;
     });
 
   const categoryItems = Object.entries(expenseByCategory)
@@ -477,114 +1056,222 @@ function renderCharts() {
     }))
     .sort((a, b) => b.value - a.value);
 
-  renderBarChart(expenseCategoryChart, categoryItems);
+  renderBarChart(DOM.expenseCategoryChart, categoryItems);
 }
 
-function editTransaction(id) {
-  const transaction = transactions.find((transaction) => transaction.id === id);
+function renderTransactionsTable() {
+  clearElementChildren(DOM.transactionsTableBody);
 
-  if (!transaction) return;
+  const filteredTransactions = getFilteredTransactions();
 
-  document.getElementById("type").value = transaction.type;
-  document.getElementById("description").value = transaction.description;
-  document.getElementById("category").value = transaction.category;
-  document.getElementById("amount").value = transaction.amount;
-  document.getElementById("date").value = transaction.date;
-  document.getElementById("due-date").value = transaction.dueDate;
-  document.getElementById("status").value = transaction.status;
+  if (filteredTransactions.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 8;
+    cell.className = "empty-state";
+    cell.textContent = "Nenhum lançamento encontrado para os filtros atuais.";
+    row.appendChild(cell);
+    DOM.transactionsTableBody.appendChild(row);
+    return;
+  }
 
-  editingTransactionId = id;
+  filteredTransactions.forEach((transaction) => {
+    const row = document.createElement("tr");
+    const displayStatus = getDisplayStatus(transaction);
 
-  submitButton.textContent = "Salvar alterações";
-  cancelEditButton.classList.remove("hidden");
+    if (displayStatus === "vencido") {
+      row.classList.add("row-overdue");
+    }
+
+    appendTextCell(row, transaction.type === "entrada" ? "Entrada" : "Saída");
+    appendTextCell(row, transaction.description);
+    appendTextCell(row, transaction.category);
+    appendTextCell(row, formatCents(transaction.amountCents));
+    appendTextCell(row, formatISODateForDisplay(transaction.date));
+    appendTextCell(row, formatISODateForDisplay(transaction.dueDate));
+    appendTextCell(row, getStatusLabel(displayStatus));
+
+    const actionCell = document.createElement("td");
+    actionCell.className = "actions-cell";
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "secondary-button edit-button";
+    editButton.dataset.id = transaction.id;
+    editButton.textContent = "Editar";
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "danger-button delete-button";
+    deleteButton.dataset.id = transaction.id;
+    deleteButton.textContent = "Excluir";
+
+    actionCell.appendChild(editButton);
+    actionCell.appendChild(deleteButton);
+    row.appendChild(actionCell);
+
+    DOM.transactionsTableBody.appendChild(row);
+  });
 }
 
-function deleteTransaction(id) {
-  const confirmed = confirm("Deseja realmente excluir este lançamento?");
+function renderAll() {
+  renderCategories();
+  renderDashboard();
+  renderSelectedDateCashflow();
+  renderWeeklyCashflow();
+  renderCategoryReport();
+  renderCharts();
+  renderTransactionsTable();
+}
 
-  if (!confirmed) return;
+function setDefaults() {
+  if (!DOM.analysisMonth.value) {
+    DOM.analysisMonth.value = getCurrentMonthValue();
+  }
 
-  transactions = transactions.filter((transaction) => transaction.id !== id);
+  const todayISO = getTodayISO();
 
-  saveTransactions();
-  renderTransactions();
+  if (!DOM.date.value) {
+    DOM.date.value = todayISO;
+  }
+
+  if (!DOM.dueDate.value) {
+    DOM.dueDate.value = todayISO;
+  }
+
+  if (!DOM.cashflowDate.value) {
+    DOM.cashflowDate.value = todayISO;
+  }
+}
+
+function showFormFeedback(message, type = "error") {
+  DOM.formFeedback.textContent = message;
+  DOM.formFeedback.className = `form-feedback ${type}`;
+}
+
+function clearFormFeedback() {
+  DOM.formFeedback.textContent = "";
+  DOM.formFeedback.className = "form-feedback";
 }
 
 function resetFormState() {
   editingTransactionId = null;
+  DOM.form.reset();
+  setDefaults();
+  DOM.type.value = "entrada";
+  updateStatusOptions("pendente");
+  DOM.submitButton.textContent = "Salvar movimento";
+  DOM.cancelEditButton.classList.add("hidden");
+  clearFormFeedback();
+}
 
-  form.reset();
-  setDefaultDates();
+function editTransaction(id) {
+  const transaction = state.transactions.find((item) => item.id === id);
 
-  submitButton.textContent = "Adicionar lançamento";
-  cancelEditButton.classList.add("hidden");
+  if (!transaction) {
+    return;
+  }
+
+  editingTransactionId = id;
+  DOM.type.value = transaction.type;
+  updateStatusOptions(transaction.status);
+
+  DOM.description.value = transaction.description;
+  DOM.category.value = transaction.category;
+  DOM.amount.value = formatCentsForInput(transaction.amountCents);
+  DOM.date.value = transaction.date;
+  DOM.dueDate.value = transaction.dueDate;
+
+  DOM.submitButton.textContent = "Salvar alterações";
+  DOM.cancelEditButton.classList.remove("hidden");
+  showFormFeedback("Modo edição ativo.", "success");
+  DOM.description.focus();
+}
+
+function deleteTransaction(id) {
+  const transaction = state.transactions.find((item) => item.id === id);
+
+  if (!transaction) {
+    return;
+  }
+
+  const confirmed = confirm(
+    `Deseja excluir o lançamento "${transaction.description}"?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  backupBeforeDestructiveChange("delete-transaction");
+  state.transactions = state.transactions.filter((item) => item.id !== id);
+  saveCurrentState();
+  renderAll();
+
+  if (editingTransactionId === id) {
+    resetFormState();
+  }
+}
+
+function addCategory() {
+  const newCategory = normalizeCategoryName(DOM.newCategory.value);
+
+  if (!newCategory) {
+    alert("Informe o nome da categoria.");
+    return;
+  }
+
+  const alreadyExists = state.categories.some(
+    (category) =>
+      category.toLocaleLowerCase("pt-BR") === newCategory.toLocaleLowerCase("pt-BR")
+  );
+
+  if (alreadyExists) {
+    alert("Essa categoria já existe.");
+    return;
+  }
+
+  state.categories.push(newCategory);
+  state.categories = getCategoryListFromState();
+  saveCurrentState();
+  renderCategories();
+
+  DOM.category.value = newCategory;
+  DOM.newCategory.value = "";
+  showFormFeedback("Categoria adicionada com sucesso.", "success");
 }
 
 function exportBackup() {
   const backupData = {
-    appName: "Loja Vida e Saúde",
-    version: "1.2.0",
-    exportDate: new Date().toISOString(),
-    transactions,
-    categories,
+    appName: APP_INFO.appName,
+    schemaVersion: APP_INFO.schemaVersion,
+    backupVersion: APP_INFO.backupVersion,
+    exportedAtISO: new Date().toISOString(),
+    categories: getCategoryListFromState(),
+    transactions: state.transactions,
   };
 
   const jsonContent = JSON.stringify(backupData, null, 2);
-
-  const blob = new Blob([jsonContent], {
-    type: "application/json",
-  });
-
+  const blob = new Blob([jsonContent], { type: "application/json" });
   const downloadUrl = URL.createObjectURL(blob);
-
   const link = document.createElement("a");
+
   link.href = downloadUrl;
-  link.download = `loja-vida-saude-backup-${new Date()
-    .toISOString()
-    .slice(0, 10)}.json`;
+  link.download = `loja-vida-e-saude-backup-${getTodayISO()}.json`;
 
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-
   URL.revokeObjectURL(downloadUrl);
-}
-
-function isValidTransaction(transaction) {
-  return (
-    transaction &&
-    typeof transaction.id === "string" &&
-    ["entrada", "saida"].includes(transaction.type) &&
-    typeof transaction.description === "string" &&
-    typeof transaction.category === "string" &&
-    typeof transaction.amount === "number" &&
-    typeof transaction.date === "string" &&
-    typeof transaction.dueDate === "string" &&
-    ["pendente", "pago", "recebido"].includes(transaction.status)
-  );
-}
-
-function isValidBackupData(backupData) {
-  return (
-    backupData &&
-    Array.isArray(backupData.transactions) &&
-    Array.isArray(backupData.categories) &&
-    backupData.transactions.every(isValidTransaction) &&
-    backupData.categories.every((category) => typeof category === "string")
-  );
 }
 
 function importBackup(file) {
   const reader = new FileReader();
 
-  reader.onload = function (event) {
+  reader.onload = (event) => {
     try {
-      const backupData = JSON.parse(event.target.result);
-
-      if (!isValidBackupData(backupData)) {
-        alert("Arquivo de backup inválido.");
-        return;
-      }
+      const rawBackup = JSON.parse(event.target.result);
+      const normalizedState = normalizeBackupPayload(rawBackup);
 
       const confirmed = confirm(
         "Importar este backup irá substituir os dados atuais. Deseja continuar?"
@@ -594,126 +1281,152 @@ function importBackup(file) {
         return;
       }
 
-      transactions = backupData.transactions;
-      categories = [
-        ...new Set(
-          backupData.categories
-            .map((category) => category.trim())
-            .filter(Boolean)
-        ),
-      ];
+      backupBeforeDestructiveChange("import-backup");
+      state = normalizedState;
+      saveCurrentState();
 
-      saveTransactions();
-      saveCategories();
-
-      filterType.value = "all";
-      filterCategory.value = "todos";
-      filterStatus.value = "todos";
+      DOM.filterType.value = "all";
+      DOM.filterCategory.value = "todos";
+      DOM.filterStatus.value = "todos";
 
       resetFormState();
-      renderCategories();
-      renderTransactions();
+      renderAll();
 
       alert("Backup importado com sucesso.");
     } catch (error) {
-      alert("Não foi possível importar o arquivo. Verifique se ele é um JSON válido.");
+      alert(error.message || "Não foi possível importar o backup.");
     } finally {
-      importBackupInput.value = "";
+      DOM.importBackupInput.value = "";
     }
   };
 
   reader.readAsText(file);
 }
 
-form.addEventListener("submit", function (event) {
+function handleFormSubmit(event) {
   event.preventDefault();
 
-  const transaction = {
-    id: crypto.randomUUID(),
-    type: document.getElementById("type").value,
-    description: document.getElementById("description").value,
-    category: document.getElementById("category").value,
-    amount: Number(document.getElementById("amount").value),
-    date: document.getElementById("date").value,
-    dueDate: document.getElementById("due-date").value,
-    status: document.getElementById("status").value,
-  };
+  try {
+    const transaction = buildTransactionFromForm();
+    const successMessage = editingTransactionId
+      ? "Lançamento atualizado com sucesso."
+      : "Lançamento cadastrado com sucesso.";
 
-  if (editingTransactionId) {
-    transactions = transactions.map((item) => {
-      if (item.id === editingTransactionId) {
-        return {
-          ...transaction,
-          id: editingTransactionId,
-        };
-      }
+    if (editingTransactionId) {
+      state.transactions = state.transactions.map((item) =>
+        item.id === editingTransactionId ? transaction : item
+      );
+    } else {
+      state.transactions.push(transaction);
+    }
 
-      return item;
-    });
-  } else {
-    transactions.push(transaction);
+    saveCurrentState();
+    renderAll();
+    resetFormState();
+    showFormFeedback(successMessage, "success");
+  } catch (error) {
+    showFormFeedback(error.message || "Não foi possível salvar o lançamento.");
   }
+}
 
-  saveTransactions();
-  renderTransactions();
-  resetFormState();
-});
+function handleAmountBlur() {
+  const rawValue = DOM.amount.value.trim();
 
-tableBody.addEventListener("click", function (event) {
-  if (event.target.classList.contains("edit-button")) {
-    const id = event.target.dataset.id;
-    editTransaction(id);
+  if (!rawValue) {
     return;
   }
 
-  if (event.target.classList.contains("delete-button")) {
-    const id = event.target.dataset.id;
-    deleteTransaction(id);
+  try {
+    const amountCents = parseMoneyToCents(rawValue);
+    DOM.amount.value = formatCentsForInput(amountCents);
+    clearFormFeedback();
+  } catch (error) {
+    showFormFeedback(error.message || "Valor inválido.");
   }
-});
+}
 
-cancelEditButton.addEventListener("click", resetFormState);
-
-filterType.addEventListener("change", renderTransactions);
-filterCategory.addEventListener("change", renderTransactions);
-filterStatus.addEventListener("change", renderTransactions);
-cashflowDateInput.addEventListener("change", renderSelectedDateCashflow);
-
-addCategoryButton.addEventListener("click", () => {
-  const newCategory = newCategoryInput.value.trim();
-
-  if (!newCategory) {
-    alert("Informe o nome da categoria.");
+function handleStorageSync(event) {
+  if (
+    ![
+      STORAGE_KEYS.stateV2,
+      STORAGE_KEYS.legacyTransactions,
+      STORAGE_KEYS.legacyCategories,
+    ].includes(event.key)
+  ) {
     return;
   }
 
-  const categoryAlreadyExists = categories.some(
-    (category) => category.toLocaleLowerCase("pt-BR") === newCategory.toLocaleLowerCase("pt-BR")
-  );
+  loadState();
+  renderAll();
+}
 
-  if (categoryAlreadyExists) {
-    alert("Essa categoria já existe.");
-    return;
-  }
+function bindEvents() {
+  DOM.form.addEventListener("submit", handleFormSubmit);
 
-  categories.push(newCategory);
+  DOM.transactionsTableBody.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
 
-  saveCategories();
-  renderCategories();
+    if (!button) {
+      return;
+    }
 
-  newCategoryInput.value = "";
-});
+    const { id } = button.dataset;
 
-exportBackupButton.addEventListener("click", exportBackup);
+    if (!id) {
+      return;
+    }
 
-importBackupInput.addEventListener("change", (event) => {
-  const file = event.target.files[0];
+    if (button.classList.contains("edit-button")) {
+      editTransaction(id);
+      return;
+    }
 
-  if (!file) return;
+    if (button.classList.contains("delete-button")) {
+      deleteTransaction(id);
+    }
+  });
 
-  importBackup(file);
-});
+  DOM.cancelEditButton.addEventListener("click", resetFormState);
+  DOM.addCategoryButton.addEventListener("click", addCategory);
+  DOM.exportBackupButton.addEventListener("click", exportBackup);
 
-setDefaultDates();
-renderCategories();
-renderTransactions();
+  DOM.importBackupInput.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    importBackup(file);
+  });
+
+  DOM.filterType.addEventListener("change", renderTransactionsTable);
+  DOM.filterCategory.addEventListener("change", renderTransactionsTable);
+  DOM.filterStatus.addEventListener("change", renderTransactionsTable);
+
+  DOM.analysisMonth.addEventListener("change", () => {
+    renderDashboard();
+    renderCategoryReport();
+    renderCharts();
+  });
+
+  DOM.cashflowDate.addEventListener("change", renderSelectedDateCashflow);
+
+  DOM.type.addEventListener("change", () => {
+    updateStatusOptions();
+  });
+
+  DOM.amount.addEventListener("blur", handleAmountBlur);
+
+  window.addEventListener("storage", handleStorageSync);
+}
+
+function init() {
+  loadState();
+  setDefaults();
+  updateStatusOptions("pendente");
+  bindEvents();
+  renderAll();
+}
+
+init();
