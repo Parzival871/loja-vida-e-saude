@@ -141,6 +141,68 @@
       </div>
     </section>
 
+    <section class="formulario">
+      <h2>Projeção de Caixa</h2>
+
+      <div class="projection-cards">
+        <div class="projection-card">
+          <h3>Hoje</h3>
+          <p id="projection-today">R$ 0,00</p>
+        </div>
+
+        <div class="projection-card">
+          <h3>+7 dias</h3>
+          <p id="projection-7-days">R$ 0,00</p>
+        </div>
+
+        <div class="projection-card">
+          <h3>+15 dias</h3>
+          <p id="projection-15-days">R$ 0,00</p>
+        </div>
+
+        <div class="projection-card">
+          <h3>+30 dias</h3>
+          <p id="projection-30-days">R$ 0,00</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="formulario">
+      <h2>Resumo Visual</h2>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Entradas x Saídas</h3>
+          <div id="income-expense-chart" class="bar-chart"></div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Saídas por Categoria</h3>
+          <div id="expense-category-chart" class="bar-chart"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="formulario">
+      <h2>Relatório por Categoria</h2>
+
+      <div class="report-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th>Entradas</th>
+              <th>Saídas</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+
+          <tbody id="category-report-body">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="tabela">
       <h2>Lançamentos</h2>
 
@@ -156,6 +218,14 @@
           <option value="all">Todos</option>
           <option value="entrada">Entradas</option>
           <option value="saida">Saídas</option>
+        </select>
+
+        <select id="filter-status">
+          <option value="todos">Todos os status</option>
+          <option value="pendente">Pendentes</option>
+          <option value="pago">Pagos</option>
+          <option value="recebido">Recebidos</option>
+          <option value="vencido">Vencidos</option>
         </select>
 
       </div>

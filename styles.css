@@ -24,7 +24,9 @@ main {
   padding: 20px;
 }
 
-.cards {
+.cards,
+.projection-cards,
+.charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 15px;
@@ -32,6 +34,8 @@ main {
 }
 
 .card,
+.projection-card,
+.chart-card,
 .formulario,
 .tabela {
   background: white;
@@ -41,7 +45,9 @@ main {
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-.card h3 {
+.card h3,
+.projection-card h3,
+.chart-card h3 {
   margin-bottom: 10px;
   color: #2d6a4f;
 }
@@ -99,10 +105,16 @@ button:hover {
   min-width: 200px;
 }
 
-.backup-actions {
+.backup-actions,
+.category-manager {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.category-manager input {
+  min-width: 240px;
+  flex: 1;
 }
 
 .import-label {
@@ -121,6 +133,10 @@ button:hover {
   display: none;
 }
 
+.report-table-wrapper {
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -137,13 +153,53 @@ th {
   background: #f0f2f5;
 }
 
+.bar-chart {
+  display: grid;
+  gap: 12px;
+}
+
+.chart-row {
+  display: grid;
+  gap: 6px;
+}
+
+.chart-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.chart-track {
+  background: #e9ecef;
+  border-radius: 999px;
+  overflow: hidden;
+  min-height: 14px;
+}
+
+.chart-bar {
+  height: 14px;
+  background: #2d6a4f;
+  min-width: 2px;
+}
+
+.chart-bar.expense {
+  background: #dc3545;
+}
+
+.empty-state {
+  color: #6c757d;
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   table {
     display: block;
     overflow-x: auto;
   }
 
-  .backup-actions {
+  .backup-actions,
+  .category-manager {
     flex-direction: column;
   }
 }

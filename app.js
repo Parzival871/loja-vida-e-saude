@@ -7,11 +7,21 @@ const totalExpenseElement = document.getElementById("total-expense");
 const upcomingBillsElement = document.getElementById("upcoming-bills");
 const overdueBillsElement = document.getElementById("overdue-bills");
 
+const projectionTodayElement = document.getElementById("projection-today");
+const projection7DaysElement = document.getElementById("projection-7-days");
+const projection15DaysElement = document.getElementById("projection-15-days");
+const projection30DaysElement = document.getElementById("projection-30-days");
+
+const categoryReportBody = document.getElementById("category-report-body");
+const incomeExpenseChart = document.getElementById("income-expense-chart");
+const expenseCategoryChart = document.getElementById("expense-category-chart");
+
 const submitButton = document.getElementById("submit-button");
 const cancelEditButton = document.getElementById("cancel-edit-button");
 
 const filterType = document.getElementById("filter-type");
 const filterCategory = document.getElementById("filter-category");
+const filterStatus = document.getElementById("filter-status");
 
 const categorySelect = document.getElementById("category");
 const newCategoryInput = document.getElementById("new-category");
@@ -57,6 +67,22 @@ function getSortedCategories() {
   return [...categories].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
+function getToday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function addDays(baseDate, days) {
+  const date = new Date(baseDate);
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+function parseDate(dateString) {
+  return new Date(dateString + "T00:00:00");
+}
+
 function renderCategories() {
   categorySelect.innerHTML = `
     <option value="">
@@ -83,53 +109,9 @@ function renderCategories() {
   });
 }
 
-function updateDashboard() {
-  const totalIncome = transactions
-    .filter((transaction) => transaction.type === "entrada")
-    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-
-  const totalExpense = transactions
-    .filter((transaction) => transaction.type === "saida")
-    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-
-  const currentBalance = totalIncome - totalExpense;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const sevenDaysFromNow = new Date(today);
-  sevenDaysFromNow.setDate(today.getDate() + 7);
-
-  const upcomingBills = transactions.filter((transaction) => {
-    if (transaction.type !== "saida") return false;
-    if (transaction.status !== "pendente") return false;
-
-    const dueDate = new Date(transaction.dueDate + "T00:00:00");
-
-    return dueDate >= today && dueDate <= sevenDaysFromNow;
-  }).length;
-
-  const overdueBills = transactions.filter((transaction) => {
-    if (transaction.type !== "saida") return false;
-    if (transaction.status !== "pendente") return false;
-
-    const dueDate = new Date(transaction.dueDate + "T00:00:00");
-
-    return dueDate < today;
-  }).length;
-
-  currentBalanceElement.textContent = formatCurrency(currentBalance);
-  totalIncomeElement.textContent = formatCurrency(totalIncome);
-  totalExpenseElement.textContent = formatCurrency(totalExpense);
-  upcomingBillsElement.textContent = upcomingBills;
-  overdueBillsElement.textContent = overdueBills;
-}
-
 function getDisplayStatus(transaction) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const dueDate = new Date(transaction.dueDate + "T00:00:00");
+  const today = getToday();
+  const dueDate = parseDate(transaction.dueDate);
 
   if (
     transaction.type === "saida" &&
@@ -142,9 +124,70 @@ function getDisplayStatus(transaction) {
   return transaction.status;
 }
 
+function calculateTotalByType(type) {
+  return transactions
+    .filter((transaction) => transaction.type === type)
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+}
+
+function calculateProjectedBalance(daysAhead) {
+  const targetDate = addDays(getToday(), daysAhead);
+
+  return transactions.reduce((balance, transaction) => {
+    const dueDate = parseDate(transaction.dueDate);
+
+    if (dueDate > targetDate) {
+      return balance;
+    }
+
+    if (transaction.type === "entrada") {
+      return balance + Number(transaction.amount);
+    }
+
+    return balance - Number(transaction.amount);
+  }, 0);
+}
+
+function updateDashboard() {
+  const totalIncome = calculateTotalByType("entrada");
+  const totalExpense = calculateTotalByType("saida");
+  const currentBalance = totalIncome - totalExpense;
+
+  const today = getToday();
+  const sevenDaysFromNow = addDays(today, 7);
+
+  const upcomingBills = transactions.filter((transaction) => {
+    if (transaction.type !== "saida") return false;
+    if (transaction.status !== "pendente") return false;
+
+    const dueDate = parseDate(transaction.dueDate);
+
+    return dueDate >= today && dueDate <= sevenDaysFromNow;
+  }).length;
+
+  const overdueBills = transactions.filter((transaction) => {
+    if (transaction.type !== "saida") return false;
+    if (transaction.status !== "pendente") return false;
+
+    const dueDate = parseDate(transaction.dueDate);
+
+    return dueDate < today;
+  }).length;
+
+  currentBalanceElement.textContent = formatCurrency(currentBalance);
+  totalIncomeElement.textContent = formatCurrency(totalIncome);
+  totalExpenseElement.textContent = formatCurrency(totalExpense);
+  upcomingBillsElement.textContent = upcomingBills;
+  overdueBillsElement.textContent = overdueBills;
+
+  projectionTodayElement.textContent = formatCurrency(calculateProjectedBalance(0));
+  projection7DaysElement.textContent = formatCurrency(calculateProjectedBalance(7));
+  projection15DaysElement.textContent = formatCurrency(calculateProjectedBalance(15));
+  projection30DaysElement.textContent = formatCurrency(calculateProjectedBalance(30));
+}
+
 function addTransactionToTable(transaction) {
   const displayStatus = getDisplayStatus(transaction);
-
   const row = document.createElement("tr");
 
   if (displayStatus === "vencido") {
@@ -172,9 +215,7 @@ function addTransactionToTable(transaction) {
   tableBody.appendChild(row);
 }
 
-function renderTransactions() {
-  tableBody.innerHTML = "";
-
+function getFilteredTransactions() {
   let filteredTransactions = [...transactions];
 
   if (filterType.value !== "all") {
@@ -189,11 +230,152 @@ function renderTransactions() {
     );
   }
 
+  if (filterStatus.value !== "todos") {
+    filteredTransactions = filteredTransactions.filter(
+      (transaction) => getDisplayStatus(transaction) === filterStatus.value
+    );
+  }
+
+  return filteredTransactions;
+}
+
+function renderTransactions() {
+  tableBody.innerHTML = "";
+
+  const filteredTransactions = getFilteredTransactions();
+
   filteredTransactions.forEach((transaction) => {
     addTransactionToTable(transaction);
   });
 
   updateDashboard();
+  renderCategoryReport();
+  renderCharts();
+}
+
+function renderCategoryReport() {
+  categoryReportBody.innerHTML = "";
+
+  const report = {};
+
+  transactions.forEach((transaction) => {
+    if (!report[transaction.category]) {
+      report[transaction.category] = {
+        income: 0,
+        expense: 0,
+      };
+    }
+
+    if (transaction.type === "entrada") {
+      report[transaction.category].income += Number(transaction.amount);
+    } else {
+      report[transaction.category].expense += Number(transaction.amount);
+    }
+  });
+
+  const sortedCategoryNames = Object.keys(report).sort((a, b) =>
+    a.localeCompare(b, "pt-BR")
+  );
+
+  if (sortedCategoryNames.length === 0) {
+    categoryReportBody.innerHTML = `
+      <tr>
+        <td colspan="4" class="empty-state">
+          Nenhum lançamento cadastrado.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  sortedCategoryNames.forEach((category) => {
+    const income = report[category].income;
+    const expense = report[category].expense;
+    const balance = income - expense;
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+      <td>${category}</td>
+      <td>${formatCurrency(income)}</td>
+      <td>${formatCurrency(expense)}</td>
+      <td>${formatCurrency(balance)}</td>
+    `;
+
+    categoryReportBody.appendChild(row);
+  });
+}
+
+function renderBarChart(container, items) {
+  container.innerHTML = "";
+
+  if (items.length === 0) {
+    container.innerHTML = `
+      <p class="empty-state">
+        Nenhum dado disponível.
+      </p>
+    `;
+    return;
+  }
+
+  const maxValue = Math.max(...items.map((item) => item.value));
+
+  items.forEach((item) => {
+    const percentage = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+
+    const row = document.createElement("div");
+    row.className = "chart-row";
+
+    row.innerHTML = `
+      <div class="chart-label">
+        <span>${item.label}</span>
+        <strong>${formatCurrency(item.value)}</strong>
+      </div>
+
+      <div class="chart-track">
+        <div class="chart-bar ${item.type === "expense" ? "expense" : ""}" style="width: ${percentage}%"></div>
+      </div>
+    `;
+
+    container.appendChild(row);
+  });
+}
+
+function renderCharts() {
+  const totalIncome = calculateTotalByType("entrada");
+  const totalExpense = calculateTotalByType("saida");
+
+  renderBarChart(incomeExpenseChart, [
+    {
+      label: "Entradas",
+      value: totalIncome,
+      type: "income",
+    },
+    {
+      label: "Saídas",
+      value: totalExpense,
+      type: "expense",
+    },
+  ].filter((item) => item.value > 0));
+
+  const expenseByCategory = {};
+
+  transactions
+    .filter((transaction) => transaction.type === "saida")
+    .forEach((transaction) => {
+      expenseByCategory[transaction.category] =
+        (expenseByCategory[transaction.category] || 0) + Number(transaction.amount);
+    });
+
+  const categoryItems = Object.entries(expenseByCategory)
+    .map(([category, value]) => ({
+      label: category,
+      value,
+      type: "expense",
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  renderBarChart(expenseCategoryChart, categoryItems);
 }
 
 function editTransaction(id) {
@@ -238,7 +420,7 @@ function resetFormState() {
 function exportBackup() {
   const backupData = {
     appName: "Financeiro MVP",
-    version: "1.0.0",
+    version: "1.1.0",
     exportDate: new Date().toISOString(),
     transactions,
     categories,
@@ -310,13 +492,20 @@ function importBackup(file) {
       }
 
       transactions = backupData.transactions;
-      categories = [...new Set(backupData.categories.map((category) => category.trim()).filter(Boolean))];
+      categories = [
+        ...new Set(
+          backupData.categories
+            .map((category) => category.trim())
+            .filter(Boolean)
+        ),
+      ];
 
       saveTransactions();
       saveCategories();
 
       filterType.value = "all";
       filterCategory.value = "todos";
+      filterStatus.value = "todos";
 
       resetFormState();
       renderCategories();
@@ -384,6 +573,7 @@ cancelEditButton.addEventListener("click", resetFormState);
 
 filterType.addEventListener("change", renderTransactions);
 filterCategory.addEventListener("change", renderTransactions);
+filterStatus.addEventListener("change", renderTransactions);
 
 addCategoryButton.addEventListener("click", () => {
   const newCategory = newCategoryInput.value.trim();
@@ -393,7 +583,11 @@ addCategoryButton.addEventListener("click", () => {
     return;
   }
 
-  if (categories.includes(newCategory)) {
+  const categoryAlreadyExists = categories.some(
+    (category) => category.toLocaleLowerCase("pt-BR") === newCategory.toLocaleLowerCase("pt-BR")
+  );
+
+  if (categoryAlreadyExists) {
     alert("Essa categoria já existe.");
     return;
   }
