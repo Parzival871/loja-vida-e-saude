@@ -31,6 +31,7 @@ const STATUS_LABELS = {
   pago: "Pago",
   recebido: "Recebido",
   vencido: "Vencido",
+  a_receber_atrasado: "A receber atrasado",
 };
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("pt-BR", {
@@ -316,18 +317,34 @@ function sumAmountCents(items) {
   return items.reduce((sum, item) => sum + item.amountCents, 0);
 }
 
+// --- Helpers de tipo/status ---
+
+function isValidTransactionType(type) {
+  return type === "entrada" || type === "saida";
+}
+
 function getAllowedStatusesForType(type) {
   if (type === "entrada") {
     return ["pendente", "recebido"];
   }
 
-  return ["pendente", "pago"];
+  if (type === "saida") {
+    return ["pendente", "pago"];
+  }
+
+  return [];
+}
+
+function isStatusAllowedForType(type, status) {
+  return getAllowedStatusesForType(type).includes(status);
 }
 
 function normalizeStatus(type, status) {
-  const allowed = getAllowedStatusesForType(type);
+  if (!isValidTransactionType(type)) {
+    return "pendente";
+  }
 
-  if (allowed.includes(status)) {
+  if (isStatusAllowedForType(type, status)) {
     return status;
   }
 
@@ -342,8 +359,97 @@ function normalizeStatus(type, status) {
   return "pendente";
 }
 
+function isIncome(transaction) {
+  return Boolean(transaction && transaction.type === "entrada");
+}
+
+function isExpense(transaction) {
+  return Boolean(transaction && transaction.type === "saida");
+}
+
+function isPending(transaction) {
+  return Boolean(transaction && transaction.status === "pendente");
+}
+
+function isReceived(transaction) {
+  return isIncome(transaction) && transaction.status === "recebido";
+}
+
+function isPaid(transaction) {
+  return isExpense(transaction) && transaction.status === "pago";
+}
+
+function isRealizedIncome(transaction) {
+  return isReceived(transaction);
+}
+
+function isRealizedExpense(transaction) {
+  return isPaid(transaction);
+}
+
+function isExpectedIncome(transaction) {
+  return isIncome(transaction) && isPending(transaction);
+}
+
+function isExpectedExpense(transaction) {
+  return isExpense(transaction) && isPending(transaction);
+}
+
 function getStatusLabel(status) {
   return STATUS_LABELS[status] || status;
+}
+
+// --- Status derivados ---
+
+function isOverdueExpense(transaction, todayISO) {
+  return (
+    isExpense(transaction) &&
+    isPending(transaction) &&
+    isValidISODate(transaction.dueDate) &&
+    compareISODate(transaction.dueDate, todayISO) < 0
+  );
+}
+
+function isOverdueIncome(transaction, todayISO) {
+  return (
+    isIncome(transaction) &&
+    isPending(transaction) &&
+    isValidISODate(transaction.dueDate) &&
+    compareISODate(transaction.dueDate, todayISO) < 0
+  );
+}
+
+function getDisplayStatus(transaction, todayISO = getTodayISO()) {
+  if (!transaction) {
+    return "pendente";
+  }
+
+  if (isOverdueExpense(transaction, todayISO)) {
+    return "vencido";
+  }
+
+  if (isOverdueIncome(transaction, todayISO)) {
+    return "a_receber_atrasado";
+  }
+
+  return transaction.status;
+}
+
+// --- Normalização de transações ---
+
+function normalizeTransactionStatus(transaction) {
+  if (!transaction || typeof transaction !== "object") {
+    return transaction;
+  }
+
+  if (!isValidTransactionType(transaction.type)) {
+    return transaction;
+  }
+
+  return {
+    ...transaction,
+    status: normalizeStatus(transaction.type, transaction.status),
+  };
 }
 
 function updateStatusOptions(preferredStatus = null) {
@@ -365,20 +471,6 @@ function updateStatusOptions(preferredStatus = null) {
   } else {
     DOM.status.value = allowedStatuses[0];
   }
-}
-
-function getDisplayStatus(transaction) {
-  const todayISO = getTodayISO();
-
-  if (
-    transaction.type === "saida" &&
-    transaction.status === "pendente" &&
-    transaction.dueDate < todayISO
-  ) {
-    return "vencido";
-  }
-
-  return transaction.status;
 }
 
 function getCategoryListFromState() {
@@ -481,7 +573,7 @@ function normalizeTransactionFromAnySchema(rawTransaction) {
     return null;
   }
 
-  return {
+  return normalizeTransactionStatus({
     id:
       typeof rawTransaction.id === "string" && rawTransaction.id.trim()
         ? rawTransaction.id.trim()
@@ -492,8 +584,8 @@ function normalizeTransactionFromAnySchema(rawTransaction) {
     amountCents,
     date,
     dueDate,
-    status: normalizeStatus(type, rawTransaction.status),
-  };
+    status: rawTransaction.status,
+  });
 }
 
 function migrateLegacyStateIfNeeded() {
@@ -602,7 +694,7 @@ function buildTransactionFromForm() {
     throw new Error("O valor deve ser maior que zero.");
   }
 
-  return {
+  return normalizeTransactionStatus({
     id: editingTransactionId || generateTransactionId(),
     type,
     description,
@@ -611,7 +703,7 @@ function buildTransactionFromForm() {
     date,
     dueDate,
     status,
-  };
+  });
 }
 
 function isValidTransactionV2(transaction) {
@@ -1079,7 +1171,7 @@ function renderTransactionsTable() {
     const row = document.createElement("tr");
     const displayStatus = getDisplayStatus(transaction);
 
-    if (displayStatus === "vencido") {
+    if (displayStatus === "vencido" || displayStatus === "a_receber_atrasado") {
       row.classList.add("row-overdue");
     }
 
