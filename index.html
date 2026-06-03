@@ -43,47 +43,59 @@
 
       <h2>Novo Lançamento</h2>
 
-      <form>
+      <form id="transaction-form">
 
-        <select>
-          <option>Entrada</option>
-          <option>Saída</option>
-        </select>
+  <select id="type" required>
+    <option value="entrada">Entrada</option>
+    <option value="saida">Saída</option>
+  </select>
 
-        <input
-          type="text"
-          placeholder="Descrição"
-        >
+  <input
+    id="description"
+    type="text"
+    placeholder="Descrição"
+    required
+  >
 
-        <input
-          type="text"
-          placeholder="Categoria"
-        >
+  <input
+    id="category"
+    type="text"
+    placeholder="Categoria"
+    required
+  >
 
-        <input
-          type="number"
-          placeholder="Valor"
-        >
+  <input
+    id="amount"
+    type="number"
+    placeholder="Valor"
+    step="0.01"
+    min="0"
+    required
+  >
 
-        <input
-          type="date"
-        >
+  <input
+    id="date"
+    type="date"
+    required
+  >
 
-        <input
-          type="date"
-        >
+  <input
+    id="due-date"
+    type="date"
+    required
+  >
 
-        <select>
-          <option>Pendente</option>
-          <option>Pago</option>
-          <option>Recebido</option>
-        </select>
+  <select id="status" required>
+    <option value="pendente">Pendente</option>
+    <option value="pago">Pago</option>
+    <option value="recebido">Recebido</option>
+  </select>
 
-        <button type="button">
-          Adicionar lançamento
-        </button>
+  <button type="submit">
+    Adicionar lançamento
+  </button>
 
-      </form>
+</form>
 
     </section>
 
@@ -104,17 +116,7 @@
           </tr>
         </thead>
 
-        <tbody>
-
-          <tr>
-            <td>Saída</td>
-            <td>Fornecedor</td>
-            <td>Mercadoria</td>
-            <td>R$ 500,00</td>
-            <td>05/06/2026</td>
-            <td>Pendente</td>
-          </tr>
-
+        <tbody id="transactions-table-body">
         </tbody>
 
       </table>
