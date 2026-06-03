@@ -5,6 +5,7 @@ const currentBalanceElement = document.getElementById("current-balance");
 const totalIncomeElement = document.getElementById("total-income");
 const totalExpenseElement = document.getElementById("total-expense");
 const upcomingBillsElement = document.getElementById("upcoming-bills");
+const overdueBillsElement = document.getElementById("overdue-bills");
 const submitButton = document.getElementById("submit-button");
 const cancelEditButton = document.getElementById("cancel-edit-button");
 
@@ -49,10 +50,20 @@ function updateDashboard() {
     return dueDate >= today && dueDate <= sevenDaysFromNow;
   }).length;
 
+  const overdueBills = transactions.filter((transaction) => {
+    if (transaction.type !== "saida") return false;
+    if (transaction.status !== "pendente") return false;
+
+    const dueDate = new Date(transaction.dueDate + "T00:00:00");
+
+    return dueDate < today;
+  }).length;
+
   currentBalanceElement.textContent = formatCurrency(currentBalance);
   totalIncomeElement.textContent = formatCurrency(totalIncome);
   totalExpenseElement.textContent = formatCurrency(totalExpense);
   upcomingBillsElement.textContent = upcomingBills;
+  overdueBillsElement.textContent = overdueBills;
 }
 
 function addTransactionToTable(transaction) {
