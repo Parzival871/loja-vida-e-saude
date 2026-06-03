@@ -68,6 +68,21 @@ main {
   color: var(--muted);
 }
 
+.summary-groups {
+  display: grid;
+  gap: 24px;
+}
+
+.summary-group-title {
+  color: var(--brand);
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.card-alert h3 {
+  color: var(--danger);
+}
+
 .cards,
 .projection-cards,
 .charts-grid {

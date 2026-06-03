@@ -22,37 +22,79 @@
         </div>
 
         <p class="summary-note">
-          Resumo calculado pelo <strong>vencimento</strong> do mês
-          <strong id="summary-period-label"></strong>.
+          Resumo calculado pela data de vencimento.
+          Período: <strong id="summary-period-label"></strong>
         </p>
       </div>
 
-      <div class="cards">
-        <div class="card">
-          <h3>Saldo do Mês</h3>
-          <p id="current-balance" class="card-value">R$ 0,00</p>
+      <div class="summary-groups">
+        <div class="summary-group">
+          <h2 class="summary-group-title">Resumo Realizado</h2>
+          <div class="cards">
+            <div class="card">
+              <h3>Entradas recebidas</h3>
+              <p id="realized-income" class="card-value">R$ 0,00</p>
+            </div>
+
+            <div class="card">
+              <h3>Saídas pagas</h3>
+              <p id="realized-expense" class="card-value">R$ 0,00</p>
+            </div>
+
+            <div class="card">
+              <h3>Saldo realizado</h3>
+              <p id="realized-balance" class="card-value">R$ 0,00</p>
+            </div>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>Entradas do Mês</h3>
-          <p id="total-income" class="card-value">R$ 0,00</p>
+        <div class="summary-group">
+          <h2 class="summary-group-title">Resumo Previsto</h2>
+          <div class="cards">
+            <div class="card">
+              <h3>Entradas previstas</h3>
+              <p id="expected-income" class="card-value">R$ 0,00</p>
+            </div>
+
+            <div class="card">
+              <h3>Saídas previstas</h3>
+              <p id="expected-expense" class="card-value">R$ 0,00</p>
+            </div>
+
+            <div class="card">
+              <h3>Saldo previsto</h3>
+              <p id="expected-balance" class="card-value">R$ 0,00</p>
+            </div>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>Saídas do Mês</h3>
-          <p id="total-expense" class="card-value">R$ 0,00</p>
-        </div>
+        <div class="summary-group">
+          <h2 class="summary-group-title">Alertas</h2>
+          <div class="cards">
+            <div class="card card-alert">
+              <h3>Contas vencidas</h3>
+              <p id="alert-overdue-expenses-value" class="card-value">R$ 0,00</p>
+              <small class="card-caption">
+                <span id="alert-overdue-expenses-count">0</span> conta(s) · escopo global
+              </small>
+            </div>
 
-        <div class="card">
-          <h3>A Vencer no Mês</h3>
-          <p id="upcoming-bills" class="card-value">0</p>
-          <small class="card-caption">Contagem de saídas pendentes</small>
-        </div>
+            <div class="card card-alert">
+              <h3>Contas a vencer no mês</h3>
+              <p id="alert-upcoming-expenses-value" class="card-value">R$ 0,00</p>
+              <small class="card-caption">
+                <span id="alert-upcoming-expenses-count">0</span> conta(s) · vencimento no mês
+              </small>
+            </div>
 
-        <div class="card">
-          <h3>Vencidas no Mês</h3>
-          <p id="overdue-bills" class="card-value">0</p>
-          <small class="card-caption">Contagem de saídas pendentes vencidas</small>
+            <div class="card card-alert">
+              <h3>Recebimentos atrasados</h3>
+              <p id="alert-overdue-income-value" class="card-value">R$ 0,00</p>
+              <small class="card-caption">
+                <span id="alert-overdue-income-count">0</span> recebimento(s) · escopo global
+              </small>
+            </div>
+          </div>
         </div>
       </div>
     </section>

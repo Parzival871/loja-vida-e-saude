@@ -48,11 +48,18 @@ const DOM = {
   form: document.getElementById("transaction-form"),
   formFeedback: document.getElementById("form-feedback"),
 
-  currentBalance: document.getElementById("current-balance"),
-  totalIncome: document.getElementById("total-income"),
-  totalExpense: document.getElementById("total-expense"),
-  upcomingBills: document.getElementById("upcoming-bills"),
-  overdueBills: document.getElementById("overdue-bills"),
+  realizedIncome: document.getElementById("realized-income"),
+  realizedExpense: document.getElementById("realized-expense"),
+  realizedBalance: document.getElementById("realized-balance"),
+  expectedIncome: document.getElementById("expected-income"),
+  expectedExpense: document.getElementById("expected-expense"),
+  expectedBalance: document.getElementById("expected-balance"),
+  alertOverdueExpensesCount: document.getElementById("alert-overdue-expenses-count"),
+  alertOverdueExpensesValue: document.getElementById("alert-overdue-expenses-value"),
+  alertUpcomingExpensesCount: document.getElementById("alert-upcoming-expenses-count"),
+  alertUpcomingExpensesValue: document.getElementById("alert-upcoming-expenses-value"),
+  alertOverdueIncomeCount: document.getElementById("alert-overdue-income-count"),
+  alertOverdueIncomeValue: document.getElementById("alert-overdue-income-value"),
   summaryPeriodLabel: document.getElementById("summary-period-label"),
   analysisMonth: document.getElementById("analysis-month"),
 
@@ -800,37 +807,54 @@ function getTransactionsForAnalysisMonth() {
 
 function calculateSummaryForMonth() {
   const monthTransactions = getTransactionsForAnalysisMonth();
-  const totalIncomeCents = sumAmountCents(
-    monthTransactions.filter((transaction) => transaction.type === "entrada")
-  );
-  const totalExpenseCents = sumAmountCents(
-    monthTransactions.filter((transaction) => transaction.type === "saida")
-  );
-  const balanceCents = totalIncomeCents - totalExpenseCents;
   const todayISO = getTodayISO();
 
-  const upcomingBillsCount = monthTransactions.filter((transaction) => {
-    return (
-      transaction.type === "saida" &&
-      transaction.status === "pendente" &&
-      transaction.dueDate >= todayISO
-    );
-  }).length;
+  const realizedIncomeCents = sumAmountCents(
+    monthTransactions.filter(isRealizedIncome)
+  );
+  const realizedExpenseCents = sumAmountCents(
+    monthTransactions.filter(isRealizedExpense)
+  );
+  const expectedIncomeCents = sumAmountCents(
+    monthTransactions.filter(isExpectedIncome)
+  );
+  const expectedExpenseCents = sumAmountCents(
+    monthTransactions.filter(isExpectedExpense)
+  );
 
-  const overdueBillsCount = monthTransactions.filter((transaction) => {
-    return (
-      transaction.type === "saida" &&
-      transaction.status === "pendente" &&
-      transaction.dueDate < todayISO
-    );
-  }).length;
+  const realizedBalanceCents = realizedIncomeCents - realizedExpenseCents;
+  const expectedBalanceCents =
+    realizedIncomeCents +
+    expectedIncomeCents -
+    (realizedExpenseCents + expectedExpenseCents);
+
+  const overdueExpenses = state.transactions.filter((transaction) =>
+    isOverdueExpense(transaction, todayISO)
+  );
+
+  const upcomingExpensesInMonth = monthTransactions.filter(
+    (transaction) =>
+      isExpectedExpense(transaction) &&
+      compareISODate(transaction.dueDate, todayISO) >= 0
+  );
+
+  const overdueIncome = state.transactions.filter((transaction) =>
+    isOverdueIncome(transaction, todayISO)
+  );
 
   return {
-    totalIncomeCents,
-    totalExpenseCents,
-    balanceCents,
-    upcomingBillsCount,
-    overdueBillsCount,
+    realizedIncomeCents,
+    realizedExpenseCents,
+    realizedBalanceCents,
+    expectedIncomeCents,
+    expectedExpenseCents,
+    expectedBalanceCents,
+    overdueExpensesCount: overdueExpenses.length,
+    overdueExpensesValueCents: sumAmountCents(overdueExpenses),
+    upcomingExpensesInMonthCount: upcomingExpensesInMonth.length,
+    upcomingExpensesInMonthValueCents: sumAmountCents(upcomingExpensesInMonth),
+    overdueIncomeCount: overdueIncome.length,
+    overdueIncomeValueCents: sumAmountCents(overdueIncome),
   };
 }
 
@@ -976,11 +1000,24 @@ function renderDashboard() {
   const [year, month] = monthValue.split("-");
   DOM.summaryPeriodLabel.textContent = `${month}/${year}`;
 
-  DOM.currentBalance.textContent = formatCents(summary.balanceCents);
-  DOM.totalIncome.textContent = formatCents(summary.totalIncomeCents);
-  DOM.totalExpense.textContent = formatCents(summary.totalExpenseCents);
-  DOM.upcomingBills.textContent = String(summary.upcomingBillsCount);
-  DOM.overdueBills.textContent = String(summary.overdueBillsCount);
+  DOM.realizedIncome.textContent = formatCents(summary.realizedIncomeCents);
+  DOM.realizedExpense.textContent = formatCents(summary.realizedExpenseCents);
+  DOM.realizedBalance.textContent = formatCents(summary.realizedBalanceCents);
+
+  DOM.expectedIncome.textContent = formatCents(summary.expectedIncomeCents);
+  DOM.expectedExpense.textContent = formatCents(summary.expectedExpenseCents);
+  DOM.expectedBalance.textContent = formatCents(summary.expectedBalanceCents);
+
+  DOM.alertOverdueExpensesCount.textContent = String(summary.overdueExpensesCount);
+  DOM.alertOverdueExpensesValue.textContent = formatCents(summary.overdueExpensesValueCents);
+
+  DOM.alertUpcomingExpensesCount.textContent = String(summary.upcomingExpensesInMonthCount);
+  DOM.alertUpcomingExpensesValue.textContent = formatCents(
+    summary.upcomingExpensesInMonthValueCents
+  );
+
+  DOM.alertOverdueIncomeCount.textContent = String(summary.overdueIncomeCount);
+  DOM.alertOverdueIncomeValue.textContent = formatCents(summary.overdueIncomeValueCents);
 
   DOM.projectionToday.textContent = formatCents(calculateProjectedBalance(0));
   DOM.projection7Days.textContent = formatCents(calculateProjectedBalance(7));
