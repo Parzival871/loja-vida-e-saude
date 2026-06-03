@@ -6,36 +6,54 @@ const totalIncomeElement = document.getElementById("total-income");
 const totalExpenseElement = document.getElementById("total-expense");
 const upcomingBillsElement = document.getElementById("upcoming-bills");
 const overdueBillsElement = document.getElementById("overdue-bills");
+
 const submitButton = document.getElementById("submit-button");
 const cancelEditButton = document.getElementById("cancel-edit-button");
+
 const filterType = document.getElementById("filter-type");
 const filterCategory = document.getElementById("filter-category");
+
 const categorySelect = document.getElementById("category");
 const newCategoryInput = document.getElementById("new-category");
 const addCategoryButton = document.getElementById("add-category-button");
+
+const exportBackupButton = document.getElementById("export-backup-button");
+
 let editingTransactionId = null;
-let categories =
-  JSON.parse(localStorage.getItem("categories")) || [
-    "Vendas",
-    "Mercadorias",
-    "Aluguel",
-    "Energia",
-    "Água",
-    "Internet",
-    "Impostos",
-    "Pró-labore",
-    "Marketing",
-    "Fretes",
-    "Outros"
-  ];
+
+let categories = JSON.parse(localStorage.getItem("categories")) || [
+  "Vendas",
+  "Mercadorias",
+  "Aluguel",
+  "Energia",
+  "Água",
+  "Internet",
+  "Impostos",
+  "Pró-labore",
+  "Marketing",
+  "Fretes",
+  "Outros",
+];
 
 let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
 
 function saveTransactions() {
   localStorage.setItem("transactions", JSON.stringify(transactions));
 }
+
 function saveCategories() {
   localStorage.setItem("categories", JSON.stringify(categories));
+}
+
+function formatCurrency(value) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function getSortedCategories() {
+  return [...categories].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 function renderCategories() {
@@ -51,53 +69,16 @@ function renderCategories() {
     </option>
   `;
 
-  [...categories]
-    .sort((a, b) => a.localeCompare(b, "pt-BR"))
-    .forEach((category) => {
-      const categoryOption = document.createElement("option");
-      categoryOption.value = category;
-      categoryOption.textContent = category;
-      categorySelect.appendChild(categoryOption);
+  getSortedCategories().forEach((category) => {
+    const categoryOption = document.createElement("option");
+    categoryOption.value = category;
+    categoryOption.textContent = category;
+    categorySelect.appendChild(categoryOption);
 
-      const filterOption = document.createElement("option");
-      filterOption.value = category;
-      filterOption.textContent = category;
-      filterCategory.appendChild(filterOption);
-    });
-}
-function renderCategoriesList() {
-
-  categoriesList.innerHTML = "";
-
-  [...categories]
-    .sort((a, b) => a.localeCompare(b, "pt-BR"))
-    .forEach((category) => {
-
-      const item = document.createElement("div");
-
-      item.className = "category-item";
-
-      item.innerHTML = `
-        <span>${category}</span>
-
-        <button
-          class="category-delete-button"
-          data-category="${category}"
-        >
-          Excluir
-        </button>
-      `;
-
-      categoriesList.appendChild(item);
-
-    });
-
-}
-
-function formatCurrency(value) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
+    const filterOption = document.createElement("option");
+    filterOption.value = category;
+    filterOption.textContent = category;
+    filterCategory.appendChild(filterOption);
   });
 }
 
@@ -143,25 +124,31 @@ function updateDashboard() {
   overdueBillsElement.textContent = overdueBills;
 }
 
+function getDisplayStatus(transaction) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(transaction.dueDate + "T00:00:00");
+
+  if (
+    transaction.type === "saida" &&
+    transaction.status === "pendente" &&
+    dueDate < today
+  ) {
+    return "vencido";
+  }
+
+  return transaction.status;
+}
+
 function addTransactionToTable(transaction) {
-    let displayStatus = transaction.status;
+  const displayStatus = getDisplayStatus(transaction);
 
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-
-const dueDate = new Date(transaction.dueDate + "T00:00:00");
-
-if (
-  transaction.type === "saida" &&
-  transaction.status === "pendente" &&
-  dueDate < today
-) {
-  displayStatus = "vencido";
-}
   const row = document.createElement("tr");
+
   if (displayStatus === "vencido") {
-  row.style.backgroundColor = "#ffe5e5";
-}
+    row.style.backgroundColor = "#ffe5e5";
+  }
 
   row.innerHTML = `
     <td>${transaction.type}</td>
@@ -171,14 +158,14 @@ if (
     <td>${transaction.dueDate}</td>
     <td>${displayStatus}</td>
     <td>
-  <button class="edit-button" data-id="${transaction.id}">
-    Editar
-  </button>
+      <button class="edit-button" data-id="${transaction.id}">
+        Editar
+      </button>
 
-  <button class="delete-button" data-id="${transaction.id}">
-    Excluir
-  </button>
-</td>
+      <button class="delete-button" data-id="${transaction.id}">
+        Excluir
+      </button>
+    </td>
   `;
 
   tableBody.appendChild(row);
@@ -207,10 +194,9 @@ function renderTransactions() {
 
   updateDashboard();
 }
+
 function editTransaction(id) {
-  const transaction = transactions.find(
-    (transaction) => transaction.id === id
-  );
+  const transaction = transactions.find((transaction) => transaction.id === id);
 
   if (!transaction) return;
 
@@ -225,20 +211,57 @@ function editTransaction(id) {
   editingTransactionId = id;
 
   submitButton.textContent = "Salvar alterações";
-
   cancelEditButton.classList.remove("hidden");
 }
+
 function deleteTransaction(id) {
   const confirmed = confirm("Deseja realmente excluir este lançamento?");
 
-  if (!confirmed) {
-    return;
-  }
+  if (!confirmed) return;
 
   transactions = transactions.filter((transaction) => transaction.id !== id);
 
   saveTransactions();
   renderTransactions();
+}
+
+function resetFormState() {
+  editingTransactionId = null;
+
+  form.reset();
+
+  submitButton.textContent = "Adicionar lançamento";
+  cancelEditButton.classList.add("hidden");
+}
+
+function exportBackup() {
+  const backupData = {
+    appName: "Financeiro MVP",
+    version: "1.0.0",
+    exportDate: new Date().toISOString(),
+    transactions,
+    categories,
+  };
+
+  const jsonContent = JSON.stringify(backupData, null, 2);
+
+  const blob = new Blob([jsonContent], {
+    type: "application/json",
+  });
+
+  const downloadUrl = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = `financeiro-mvp-backup-${new Date()
+    .toISOString()
+    .slice(0, 10)}.json`;
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(downloadUrl);
 }
 
 form.addEventListener("submit", function (event) {
@@ -256,33 +279,26 @@ form.addEventListener("submit", function (event) {
   };
 
   if (editingTransactionId) {
-  transactions = transactions.map((item) => {
-    if (item.id === editingTransactionId) {
-      return {
-        ...transaction,
-        id: editingTransactionId,
-      };
-    }
+    transactions = transactions.map((item) => {
+      if (item.id === editingTransactionId) {
+        return {
+          ...transaction,
+          id: editingTransactionId,
+        };
+      }
 
-    return item;
-  });
+      return item;
+    });
+  } else {
+    transactions.push(transaction);
+  }
 
-  editingTransactionId = null;
-
-  submitButton.textContent = "Adicionar lançamento";
-  cancelEditButton.classList.add("hidden");
-} else {
-  transactions.push(transaction);
-}
-
-saveTransactions();
-renderTransactions();
-
-form.reset();
+  saveTransactions();
+  renderTransactions();
+  resetFormState();
 });
 
 tableBody.addEventListener("click", function (event) {
-
   if (event.target.classList.contains("edit-button")) {
     const id = event.target.dataset.id;
     editTransaction(id);
@@ -293,25 +309,13 @@ tableBody.addEventListener("click", function (event) {
     const id = event.target.dataset.id;
     deleteTransaction(id);
   }
-
 });
-cancelEditButton.addEventListener("click", () => {
-  editingTransactionId = null;
 
-  form.reset();
+cancelEditButton.addEventListener("click", resetFormState);
 
-  submitButton.textContent = "Adicionar lançamento";
+filterType.addEventListener("change", renderTransactions);
+filterCategory.addEventListener("change", renderTransactions);
 
-  cancelEditButton.classList.add("hidden");
-});
-filterType.addEventListener(
-  "change",
-  renderTransactions
-);
-filterCategory.addEventListener(
-  "change",
-  renderTransactions
-);
 addCategoryButton.addEventListener("click", () => {
   const newCategory = newCategoryInput.value.trim();
 
@@ -326,12 +330,14 @@ addCategoryButton.addEventListener("click", () => {
   }
 
   categories.push(newCategory);
-  categories.sort();
 
   saveCategories();
   renderCategories();
 
   newCategoryInput.value = "";
 });
+
+exportBackupButton.addEventListener("click", exportBackup);
+
 renderCategories();
 renderTransactions();

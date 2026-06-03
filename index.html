@@ -59,117 +59,115 @@
         </button>
       </div>
     </section>
-    <section class="formulario">
 
+    <section class="formulario">
       <h2>Novo Lançamento</h2>
 
       <form id="transaction-form">
 
-  <select id="type" required>
-    <option value="entrada">Entrada</option>
-    <option value="saida">Saída</option>
-  </select>
+        <select id="type" required>
+          <option value="entrada">Entrada</option>
+          <option value="saida">Saída</option>
+        </select>
 
-  <input
-    id="description"
-    type="text"
-    placeholder="Descrição"
-    required
-  >
+        <input
+          id="description"
+          type="text"
+          placeholder="Descrição"
+          required
+        >
 
-  <select id="category" required>
+        <select id="category" required>
+          <option value="">
+            Selecione uma categoria
+          </option>
+        </select>
 
-    <option value="">
-      Selecione uma categoria
-    </option>
+        <input
+          id="amount"
+          type="number"
+          placeholder="Valor"
+          step="0.01"
+          min="0"
+          required
+        >
 
-  </select>
+        <input
+          id="date"
+          type="date"
+          required
+        >
 
-  <input
-    id="amount"
-    type="number"
-    placeholder="Valor"
-    step="0.01"
-    min="0"
-    required
-  >
+        <input
+          id="due-date"
+          type="date"
+          required
+        >
 
-  <input
-    id="date"
-    type="date"
-    required
-  >
+        <select id="status" required>
+          <option value="pendente">Pendente</option>
+          <option value="pago">Pago</option>
+          <option value="recebido">Recebido</option>
+        </select>
 
-  <input
-    id="due-date"
-    type="date"
-    required
-  >
+        <button id="submit-button" type="submit">
+          Adicionar lançamento
+        </button>
 
-  <select id="status" required>
-    <option value="pendente">Pendente</option>
-    <option value="pago">Pago</option>
-    <option value="recebido">Recebido</option>
-  </select>
+        <button id="cancel-edit-button" type="button" class="secondary-button hidden">
+          Cancelar edição
+        </button>
 
-  <button id="submit-button" type="submit">
-  Adicionar lançamento
-</button>
-
-<button id="cancel-edit-button" type="button" class="secondary-button hidden">
-  Cancelar edição
-</button>
-
+      </form>
     </section>
 
-<section class="tabela">
+    <section class="formulario">
+      <h2>Backup dos Dados</h2>
 
-  <h2>Lançamentos</h2>
+      <button id="export-backup-button" type="button">
+        Exportar Backup
+      </button>
+    </section>
 
-  <div class="filters">
+    <section class="tabela">
+      <h2>Lançamentos</h2>
 
-    <select id="filter-category">
-      <option value="todos">
-        Todas as categorias
-      </option>
-    </select>
+      <div class="filters">
 
-    <select id="filter-type">
-      <option value="all">
-        Todos
-      </option>
+        <select id="filter-category">
+          <option value="todos">
+            Todas as categorias
+          </option>
+        </select>
 
-      <option value="entrada">
-        Entradas
-      </option>
+        <select id="filter-type">
+          <option value="all">Todos</option>
+          <option value="entrada">Entradas</option>
+          <option value="saida">Saídas</option>
+        </select>
 
-      <option value="saida">
-        Saídas
-      </option>
-    </select>
+      </div>
 
-  </div>
+      <table>
 
-  <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Valor</th>
+            <th>Vencimento</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
 
-    <thead>
-      <tr>
-        <th>Tipo</th>
-        <th>Descrição</th>
-        <th>Categoria</th>
-        <th>Valor</th>
-        <th>Vencimento</th>
-        <th>Status</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
+        <tbody id="transactions-table-body">
+        </tbody>
 
-    <tbody id="transactions-table-body">
-    </tbody>
+      </table>
 
-  </table>
-
-</section>
+    </section>
 
   </main>
 
