@@ -6,7 +6,11 @@ const totalIncomeElement = document.getElementById("total-income");
 const totalExpenseElement = document.getElementById("total-expense");
 const upcomingBillsElement = document.getElementById("upcoming-bills");
 
-const transactions = [];
+let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+function saveTransactions() {
+  localStorage.setItem("transactions", JSON.stringify(transactions));
+}
 
 function formatCurrency(value) {
   return value.toLocaleString("pt-BR", {
@@ -27,7 +31,9 @@ function updateDashboard() {
   const currentBalance = totalIncome - totalExpense;
 
   const today = new Date();
-  const sevenDaysFromNow = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const sevenDaysFromNow = new Date(today);
   sevenDaysFromNow.setDate(today.getDate() + 7);
 
   const upcomingBills = transactions.filter((transaction) => {
@@ -60,10 +66,21 @@ function addTransactionToTable(transaction) {
   tableBody.appendChild(row);
 }
 
+function renderTransactions() {
+  tableBody.innerHTML = "";
+
+  transactions.forEach((transaction) => {
+    addTransactionToTable(transaction);
+  });
+
+  updateDashboard();
+}
+
 form.addEventListener("submit", function (event) {
   event.preventDefault();
 
   const transaction = {
+    id: crypto.randomUUID(),
     type: document.getElementById("type").value,
     description: document.getElementById("description").value,
     category: document.getElementById("category").value,
@@ -74,9 +91,10 @@ form.addEventListener("submit", function (event) {
   };
 
   transactions.push(transaction);
-
-  addTransactionToTable(transaction);
-  updateDashboard();
+  saveTransactions();
+  renderTransactions();
 
   form.reset();
 });
+
+renderTransactions();
