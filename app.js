@@ -18,6 +18,7 @@ const newCategoryInput = document.getElementById("new-category");
 const addCategoryButton = document.getElementById("add-category-button");
 
 const exportBackupButton = document.getElementById("export-backup-button");
+const importBackupInput = document.getElementById("import-backup-input");
 
 let editingTransactionId = null;
 
@@ -264,6 +265,74 @@ function exportBackup() {
   URL.revokeObjectURL(downloadUrl);
 }
 
+function isValidTransaction(transaction) {
+  return (
+    transaction &&
+    typeof transaction.id === "string" &&
+    ["entrada", "saida"].includes(transaction.type) &&
+    typeof transaction.description === "string" &&
+    typeof transaction.category === "string" &&
+    typeof transaction.amount === "number" &&
+    typeof transaction.date === "string" &&
+    typeof transaction.dueDate === "string" &&
+    ["pendente", "pago", "recebido"].includes(transaction.status)
+  );
+}
+
+function isValidBackupData(backupData) {
+  return (
+    backupData &&
+    Array.isArray(backupData.transactions) &&
+    Array.isArray(backupData.categories) &&
+    backupData.transactions.every(isValidTransaction) &&
+    backupData.categories.every((category) => typeof category === "string")
+  );
+}
+
+function importBackup(file) {
+  const reader = new FileReader();
+
+  reader.onload = function (event) {
+    try {
+      const backupData = JSON.parse(event.target.result);
+
+      if (!isValidBackupData(backupData)) {
+        alert("Arquivo de backup inválido.");
+        return;
+      }
+
+      const confirmed = confirm(
+        "Importar este backup irá substituir os dados atuais. Deseja continuar?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      transactions = backupData.transactions;
+      categories = [...new Set(backupData.categories.map((category) => category.trim()).filter(Boolean))];
+
+      saveTransactions();
+      saveCategories();
+
+      filterType.value = "all";
+      filterCategory.value = "todos";
+
+      resetFormState();
+      renderCategories();
+      renderTransactions();
+
+      alert("Backup importado com sucesso.");
+    } catch (error) {
+      alert("Não foi possível importar o arquivo. Verifique se ele é um JSON válido.");
+    } finally {
+      importBackupInput.value = "";
+    }
+  };
+
+  reader.readAsText(file);
+}
+
 form.addEventListener("submit", function (event) {
   event.preventDefault();
 
@@ -338,6 +407,14 @@ addCategoryButton.addEventListener("click", () => {
 });
 
 exportBackupButton.addEventListener("click", exportBackup);
+
+importBackupInput.addEventListener("change", (event) => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  importBackup(file);
+});
 
 renderCategories();
 renderTransactions();
