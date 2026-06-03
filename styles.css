@@ -121,3 +121,23 @@ th {
 .filters select {
   max-width: 250px;
 }
+#categories-list {
+  margin-top: 20px;
+}
+
+.category-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.category-delete-button {
+  background: #dc3545;
+  padding: 6px 12px;
+}
+
+.category-delete-button:hover {
+  background: #c82333;
+}

@@ -12,7 +12,6 @@ const filterType = document.getElementById("filter-type");
 const categorySelect = document.getElementById("category");
 const newCategoryInput = document.getElementById("new-category");
 const addCategoryButton = document.getElementById("add-category-button");
-
 let editingTransactionId = null;
 let categories =
   JSON.parse(localStorage.getItem("categories")) || [
@@ -55,6 +54,34 @@ function renderCategories() {
 
         categorySelect.appendChild(option);
     });
+}
+function renderCategoriesList() {
+
+  categoriesList.innerHTML = "";
+
+  [...categories]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"))
+    .forEach((category) => {
+
+      const item = document.createElement("div");
+
+      item.className = "category-item";
+
+      item.innerHTML = `
+        <span>${category}</span>
+
+        <button
+          class="category-delete-button"
+          data-category="${category}"
+        >
+          Excluir
+        </button>
+      `;
+
+      categoriesList.appendChild(item);
+
+    });
+
 }
 
 function formatCurrency(value) {
