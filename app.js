@@ -56,7 +56,24 @@ function updateDashboard() {
 }
 
 function addTransactionToTable(transaction) {
+    let displayStatus = transaction.status;
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const dueDate = new Date(transaction.dueDate + "T00:00:00");
+
+if (
+  transaction.type === "saida" &&
+  transaction.status === "pendente" &&
+  dueDate < today
+) {
+  displayStatus = "vencido";
+}
   const row = document.createElement("tr");
+  if (displayStatus === "vencido") {
+  row.style.backgroundColor = "#ffe5e5";
+}
 
   row.innerHTML = `
     <td>${transaction.type}</td>
@@ -64,7 +81,7 @@ function addTransactionToTable(transaction) {
     <td>${transaction.category}</td>
     <td>${formatCurrency(Number(transaction.amount))}</td>
     <td>${transaction.dueDate}</td>
-    <td>${transaction.status}</td>
+    <td>${displayStatus}</td>
     <td>
   <button class="edit-button" data-id="${transaction.id}">
     Editar
