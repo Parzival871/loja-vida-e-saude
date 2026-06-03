@@ -13,412 +13,447 @@
     <p>Controle financeiro simplificado</p>
   </header>
 
-  <main>
-    <section class="summary-section">
-      <div class="summary-toolbar">
-        <div class="field-group compact-field">
-          <label for="analysis-month">Mês de análise</label>
-          <input id="analysis-month" type="month">
-        </div>
+  <div class="app-shell">
+    <nav id="app-nav" class="app-nav" aria-label="Navegação principal">
+      <button
+        type="button"
+        class="app-nav-button is-active"
+        data-view="dashboard"
+        aria-current="page"
+      >
+        Início
+      </button>
+      <button type="button" class="app-nav-button" data-view="cashflow">
+        Caixa
+      </button>
+      <button type="button" class="app-nav-button" data-view="transactions">
+        Lançar
+      </button>
+      <button type="button" class="app-nav-button" data-view="reports">
+        Relatórios
+      </button>
+      <button type="button" class="app-nav-button" data-view="settings">
+        Ajustes
+      </button>
+    </nav>
 
-        <p class="summary-note">
-          Resumo calculado pela data de vencimento.
-          Período: <strong id="summary-period-label"></strong>
-        </p>
+    <main id="app-main">
+      <div id="view-dashboard" class="app-view">
+        <section class="summary-section">
+          <div class="summary-toolbar">
+            <div class="field-group compact-field">
+              <label for="analysis-month">Mês de análise</label>
+              <input id="analysis-month" type="month">
+            </div>
+
+            <p class="summary-note">
+              Resumo calculado pela data de vencimento.
+              Período: <strong id="summary-period-label"></strong>
+            </p>
+          </div>
+
+          <div class="summary-groups">
+            <div class="summary-group">
+              <h2 class="summary-group-title">Resumo Realizado</h2>
+              <div class="cards">
+                <div class="card">
+                  <h3>Entradas recebidas</h3>
+                  <p id="realized-income" class="card-value">R$ 0,00</p>
+                </div>
+
+                <div class="card">
+                  <h3>Saídas pagas</h3>
+                  <p id="realized-expense" class="card-value">R$ 0,00</p>
+                </div>
+
+                <div class="card">
+                  <h3>Saldo realizado</h3>
+                  <p id="realized-balance" class="card-value">R$ 0,00</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-group">
+              <h2 class="summary-group-title">Resumo Previsto</h2>
+              <div class="cards">
+                <div class="card">
+                  <h3>Entradas previstas</h3>
+                  <p id="expected-income" class="card-value">R$ 0,00</p>
+                </div>
+
+                <div class="card">
+                  <h3>Saídas previstas</h3>
+                  <p id="expected-expense" class="card-value">R$ 0,00</p>
+                </div>
+
+                <div class="card">
+                  <h3>Saldo previsto</h3>
+                  <p id="expected-balance" class="card-value">R$ 0,00</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-group">
+              <h2 class="summary-group-title">Alertas</h2>
+              <div class="cards">
+                <div class="card card-alert">
+                  <h3>Contas vencidas</h3>
+                  <p id="alert-overdue-expenses-value" class="card-value">R$ 0,00</p>
+                  <small class="card-caption">
+                    <span id="alert-overdue-expenses-count">0</span> conta(s) · escopo global
+                  </small>
+                </div>
+
+                <div class="card card-alert">
+                  <h3>Contas a vencer no mês</h3>
+                  <p id="alert-upcoming-expenses-value" class="card-value">R$ 0,00</p>
+                  <small class="card-caption">
+                    <span id="alert-upcoming-expenses-count">0</span> conta(s) · vencimento no mês
+                  </small>
+                </div>
+
+                <div class="card card-alert">
+                  <h3>Recebimentos atrasados</h3>
+                  <p id="alert-overdue-income-value" class="card-value">R$ 0,00</p>
+                  <small class="card-caption">
+                    <span id="alert-overdue-income-count">0</span> recebimento(s) · escopo global
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="formulario">
+          <h2>Projeção de Caixa</h2>
+
+          <div class="projection-cards">
+            <div class="projection-card">
+              <h3>Hoje</h3>
+              <p id="projection-today">R$ 0,00</p>
+            </div>
+
+            <div class="projection-card">
+              <h3>+7 dias</h3>
+              <p id="projection-7-days">R$ 0,00</p>
+            </div>
+
+            <div class="projection-card">
+              <h3>+15 dias</h3>
+              <p id="projection-15-days">R$ 0,00</p>
+            </div>
+
+            <div class="projection-card">
+              <h3>+30 dias</h3>
+              <p id="projection-30-days">R$ 0,00</p>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <div class="summary-groups">
-        <div class="summary-group">
-          <h2 class="summary-group-title">Resumo Realizado</h2>
-          <div class="cards">
-            <div class="card">
-              <h3>Entradas recebidas</h3>
-              <p id="realized-income" class="card-value">R$ 0,00</p>
+      <div id="view-cashflow" class="app-view" hidden>
+        <section class="formulario">
+          <h2>Fluxo de Caixa por Data</h2>
+          <p class="section-description">
+            Fluxo calculado pela data de vencimento. Selecione uma data para consultar o dia.
+          </p>
+
+          <div class="field-group compact-field">
+            <label for="cashflow-date">Data para consulta</label>
+            <input id="cashflow-date" type="date">
+          </div>
+
+          <div class="summary-groups cashflow-groups">
+            <div class="summary-group">
+              <h3 class="summary-group-title">Realizado no dia</h3>
+              <div class="projection-cards cashflow-summary">
+                <div class="projection-card">
+                  <h3>Entradas recebidas no dia</h3>
+                  <p id="daily-realized-income">R$ 0,00</p>
+                </div>
+
+                <div class="projection-card">
+                  <h3>Saídas pagas no dia</h3>
+                  <p id="daily-realized-expense">R$ 0,00</p>
+                </div>
+
+                <div class="projection-card">
+                  <h3>Saldo realizado do dia</h3>
+                  <p id="daily-realized-balance">R$ 0,00</p>
+                </div>
+              </div>
             </div>
 
-            <div class="card">
-              <h3>Saídas pagas</h3>
-              <p id="realized-expense" class="card-value">R$ 0,00</p>
+            <div class="summary-group">
+              <h3 class="summary-group-title">Previsto no dia</h3>
+              <div class="projection-cards cashflow-summary">
+                <div class="projection-card">
+                  <h3>Entradas previstas no dia</h3>
+                  <p id="daily-expected-income">R$ 0,00</p>
+                </div>
+
+                <div class="projection-card">
+                  <h3>Saídas previstas no dia</h3>
+                  <p id="daily-expected-expense">R$ 0,00</p>
+                </div>
+
+                <div class="projection-card">
+                  <h3>Saldo previsto do dia</h3>
+                  <p id="daily-expected-balance">R$ 0,00</p>
+                </div>
+              </div>
             </div>
 
-            <div class="card">
-              <h3>Saldo realizado</h3>
-              <p id="realized-balance" class="card-value">R$ 0,00</p>
+            <div class="summary-group">
+              <h3 class="summary-group-title">Pendências do dia</h3>
+              <div class="projection-cards cashflow-summary">
+                <div class="projection-card">
+                  <h3>Pendente a pagar</h3>
+                  <p id="daily-pending-expense">R$ 0,00</p>
+                </div>
+
+                <div class="projection-card">
+                  <h3>Pendente a receber</h3>
+                  <p id="daily-pending-income">R$ 0,00</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="summary-group">
-          <h2 class="summary-group-title">Resumo Previsto</h2>
-          <div class="cards">
-            <div class="card">
-              <h3>Entradas previstas</h3>
-              <p id="expected-income" class="card-value">R$ 0,00</p>
-            </div>
+        <section class="formulario">
+          <h2>Próximos 7 Dias</h2>
+          <p class="section-description">
+            Fluxo calculado pela data de vencimento.
+          </p>
 
-            <div class="card">
-              <h3>Saídas previstas</h3>
-              <p id="expected-expense" class="card-value">R$ 0,00</p>
-            </div>
+          <div class="report-table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Entradas recebidas</th>
+                  <th>Entradas previstas</th>
+                  <th>Saídas pagas</th>
+                  <th>Saídas previstas</th>
+                  <th>Pendente a pagar</th>
+                  <th>Pendente a receber</th>
+                  <th>Saldo realizado</th>
+                  <th>Saldo previsto</th>
+                </tr>
+              </thead>
 
-            <div class="card">
-              <h3>Saldo previsto</h3>
-              <p id="expected-balance" class="card-value">R$ 0,00</p>
-            </div>
+              <tbody id="weekly-cashflow-body"></tbody>
+            </table>
           </div>
-        </div>
+        </section>
+      </div>
 
-        <div class="summary-group">
-          <h2 class="summary-group-title">Alertas</h2>
-          <div class="cards">
-            <div class="card card-alert">
-              <h3>Contas vencidas</h3>
-              <p id="alert-overdue-expenses-value" class="card-value">R$ 0,00</p>
-              <small class="card-caption">
-                <span id="alert-overdue-expenses-count">0</span> conta(s) · escopo global
+      <div id="view-transactions" class="app-view" hidden>
+        <section class="formulario">
+          <h2>Cadastrar Movimento Financeiro</h2>
+
+          <p id="form-feedback" class="form-feedback" aria-live="polite"></p>
+
+          <form id="transaction-form">
+            <div class="field-group">
+              <label for="type">Tipo de movimento</label>
+              <select id="type" required>
+                <option value="entrada">Entrada</option>
+                <option value="saida">Saída</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="description">Descrição</label>
+              <input
+                id="description"
+                type="text"
+                placeholder="Ex.: Venda do dia, fornecedor, aluguel"
+                maxlength="120"
+                required
+              >
+            </div>
+
+            <div class="field-group">
+              <label for="category">Categoria</label>
+              <select id="category" required>
+                <option value="">Selecione uma categoria</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="amount">Valor</label>
+              <input
+                id="amount"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="Ex.: 3.000,00"
+                aria-describedby="amount-help"
+                required
+              >
+              <small id="amount-help" class="field-help">
+                Aceita 3000, 3000,00 ou 3.000,00.
               </small>
             </div>
 
-            <div class="card card-alert">
-              <h3>Contas a vencer no mês</h3>
-              <p id="alert-upcoming-expenses-value" class="card-value">R$ 0,00</p>
-              <small class="card-caption">
-                <span id="alert-upcoming-expenses-count">0</span> conta(s) · vencimento no mês
-              </small>
+            <div class="field-group">
+              <label for="date">Data do Lançamento</label>
+              <input id="date" type="date" required>
             </div>
 
-            <div class="card card-alert">
-              <h3>Recebimentos atrasados</h3>
-              <p id="alert-overdue-income-value" class="card-value">R$ 0,00</p>
-              <small class="card-caption">
-                <span id="alert-overdue-income-count">0</span> recebimento(s) · escopo global
-              </small>
+            <div class="field-group">
+              <label for="due-date">Data de Vencimento</label>
+              <input id="due-date" type="date" required>
+            </div>
+
+            <div class="field-group">
+              <label for="status">Status</label>
+              <select id="status" required></select>
+            </div>
+
+            <div class="button-row">
+              <button id="submit-button" type="submit">
+                Salvar movimento
+              </button>
+
+              <button
+                id="cancel-edit-button"
+                type="button"
+                class="secondary-button hidden"
+              >
+                Cancelar edição
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="tabela">
+          <h2>Lançamentos</h2>
+
+          <div class="filters">
+            <select id="filter-category">
+              <option value="todos">Todas as categorias</option>
+            </select>
+
+            <select id="filter-type">
+              <option value="all">Todos</option>
+              <option value="entrada">Entradas</option>
+              <option value="saida">Saídas</option>
+            </select>
+
+            <select id="filter-status">
+              <option value="todos">Todos os status</option>
+              <option value="pendente">Pendentes</option>
+              <option value="pago">Pagos</option>
+              <option value="recebido">Recebidos</option>
+              <option value="vencido">Vencidos</option>
+            </select>
+          </div>
+
+          <div class="report-table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Valor</th>
+                  <th>Lançamento</th>
+                  <th>Vencimento</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+
+              <tbody id="transactions-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div id="view-reports" class="app-view" hidden>
+        <section class="formulario">
+          <h2>Resumo Visual do Mês</h2>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Entradas x Saídas</h3>
+              <div id="income-expense-chart" class="bar-chart"></div>
+            </div>
+
+            <div class="chart-card">
+              <h3>Saídas por Categoria</h3>
+              <div id="expense-category-chart" class="bar-chart"></div>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <section class="formulario">
-      <h2>Nova Categoria</h2>
+        <section class="formulario">
+          <h2>Relatório por Categoria no Mês</h2>
 
-      <div class="category-manager">
-        <input
-          id="new-category"
-          type="text"
-          placeholder="Nome da nova categoria"
-          maxlength="60"
-        >
+          <div class="report-table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Categoria</th>
+                  <th>Entradas</th>
+                  <th>Saídas</th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
 
-        <button id="add-category-button" type="button">
-          Adicionar Categoria
-        </button>
-      </div>
-    </section>
-
-    <section class="formulario">
-      <h2>Cadastrar Movimento Financeiro</h2>
-
-      <p id="form-feedback" class="form-feedback" aria-live="polite"></p>
-
-      <form id="transaction-form">
-        <div class="field-group">
-          <label for="type">Tipo de movimento</label>
-          <select id="type" required>
-            <option value="entrada">Entrada</option>
-            <option value="saida">Saída</option>
-          </select>
-        </div>
-
-        <div class="field-group">
-          <label for="description">Descrição</label>
-          <input
-            id="description"
-            type="text"
-            placeholder="Ex.: Venda do dia, fornecedor, aluguel"
-            maxlength="120"
-            required
-          >
-        </div>
-
-        <div class="field-group">
-          <label for="category">Categoria</label>
-          <select id="category" required>
-            <option value="">Selecione uma categoria</option>
-          </select>
-        </div>
-
-        <div class="field-group">
-          <label for="amount">Valor</label>
-          <input
-            id="amount"
-            type="text"
-            inputmode="decimal"
-            autocomplete="off"
-            placeholder="Ex.: 3.000,00"
-            aria-describedby="amount-help"
-            required
-          >
-          <small id="amount-help" class="field-help">
-            Aceita 3000, 3000,00 ou 3.000,00.
-          </small>
-        </div>
-
-        <div class="field-group">
-          <label for="date">Data do Lançamento</label>
-          <input id="date" type="date" required>
-        </div>
-
-        <div class="field-group">
-          <label for="due-date">Data de Vencimento</label>
-          <input id="due-date" type="date" required>
-        </div>
-
-        <div class="field-group">
-          <label for="status">Status</label>
-          <select id="status" required></select>
-        </div>
-
-        <div class="button-row">
-          <button id="submit-button" type="submit">
-            Salvar movimento
-          </button>
-
-          <button
-            id="cancel-edit-button"
-            type="button"
-            class="secondary-button hidden"
-          >
-            Cancelar edição
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <section class="formulario">
-      <h2>Backup dos Dados</h2>
-
-      <div class="backup-actions">
-        <button id="export-backup-button" type="button">
-          Exportar Backup
-        </button>
-
-        <label for="import-backup-input" class="import-label">
-          Importar Backup
-        </label>
-
-        <input
-          id="import-backup-input"
-          type="file"
-          accept="application/json,.json"
-        >
-      </div>
-
-      <p class="section-description">
-        O backup exporta os dados no formato novo com valores em centavos.
-      </p>
-    </section>
-
-    <section class="formulario">
-      <h2>Projeção de Caixa</h2>
-
-      <div class="projection-cards">
-        <div class="projection-card">
-          <h3>Hoje</h3>
-          <p id="projection-today">R$ 0,00</p>
-        </div>
-
-        <div class="projection-card">
-          <h3>+7 dias</h3>
-          <p id="projection-7-days">R$ 0,00</p>
-        </div>
-
-        <div class="projection-card">
-          <h3>+15 dias</h3>
-          <p id="projection-15-days">R$ 0,00</p>
-        </div>
-
-        <div class="projection-card">
-          <h3>+30 dias</h3>
-          <p id="projection-30-days">R$ 0,00</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="formulario">
-      <h2>Fluxo de Caixa por Data</h2>
-      <p class="section-description">
-        Fluxo calculado pela data de vencimento. Selecione uma data para consultar o dia.
-      </p>
-
-      <div class="field-group compact-field">
-        <label for="cashflow-date">Data para consulta</label>
-        <input id="cashflow-date" type="date">
-      </div>
-
-      <div class="summary-groups cashflow-groups">
-        <div class="summary-group">
-          <h3 class="summary-group-title">Realizado no dia</h3>
-          <div class="projection-cards cashflow-summary">
-            <div class="projection-card">
-              <h3>Entradas recebidas no dia</h3>
-              <p id="daily-realized-income">R$ 0,00</p>
-            </div>
-
-            <div class="projection-card">
-              <h3>Saídas pagas no dia</h3>
-              <p id="daily-realized-expense">R$ 0,00</p>
-            </div>
-
-            <div class="projection-card">
-              <h3>Saldo realizado do dia</h3>
-              <p id="daily-realized-balance">R$ 0,00</p>
-            </div>
+              <tbody id="category-report-body"></tbody>
+            </table>
           </div>
-        </div>
+        </section>
+      </div>
 
-        <div class="summary-group">
-          <h3 class="summary-group-title">Previsto no dia</h3>
-          <div class="projection-cards cashflow-summary">
-            <div class="projection-card">
-              <h3>Entradas previstas no dia</h3>
-              <p id="daily-expected-income">R$ 0,00</p>
-            </div>
+      <div id="view-settings" class="app-view" hidden>
+        <section class="formulario">
+          <h2>Nova Categoria</h2>
 
-            <div class="projection-card">
-              <h3>Saídas previstas no dia</h3>
-              <p id="daily-expected-expense">R$ 0,00</p>
-            </div>
+          <div class="category-manager">
+            <input
+              id="new-category"
+              type="text"
+              placeholder="Nome da nova categoria"
+              maxlength="60"
+            >
 
-            <div class="projection-card">
-              <h3>Saldo previsto do dia</h3>
-              <p id="daily-expected-balance">R$ 0,00</p>
-            </div>
+            <button id="add-category-button" type="button">
+              Adicionar Categoria
+            </button>
           </div>
-        </div>
+        </section>
 
-        <div class="summary-group">
-          <h3 class="summary-group-title">Pendências do dia</h3>
-          <div class="projection-cards cashflow-summary">
-            <div class="projection-card">
-              <h3>Pendente a pagar</h3>
-              <p id="daily-pending-expense">R$ 0,00</p>
-            </div>
+        <section class="formulario">
+          <h2>Backup dos Dados</h2>
 
-            <div class="projection-card">
-              <h3>Pendente a receber</h3>
-              <p id="daily-pending-income">R$ 0,00</p>
-            </div>
+          <div class="backup-actions">
+            <button id="export-backup-button" type="button">
+              Exportar Backup
+            </button>
+
+            <label for="import-backup-input" class="import-label">
+              Importar Backup
+            </label>
+
+            <input
+              id="import-backup-input"
+              type="file"
+              accept="application/json,.json"
+            >
           </div>
-        </div>
+
+          <p class="section-description">
+            O backup exporta os dados no formato novo com valores em centavos.
+          </p>
+        </section>
       </div>
-    </section>
-
-    <section class="formulario">
-      <h2>Próximos 7 Dias</h2>
-      <p class="section-description">
-        Fluxo calculado pela data de vencimento.
-      </p>
-
-      <div class="report-table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Entradas recebidas</th>
-              <th>Entradas previstas</th>
-              <th>Saídas pagas</th>
-              <th>Saídas previstas</th>
-              <th>Pendente a pagar</th>
-              <th>Pendente a receber</th>
-              <th>Saldo realizado</th>
-              <th>Saldo previsto</th>
-            </tr>
-          </thead>
-
-          <tbody id="weekly-cashflow-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="formulario">
-      <h2>Resumo Visual do Mês</h2>
-
-      <div class="charts-grid">
-        <div class="chart-card">
-          <h3>Entradas x Saídas</h3>
-          <div id="income-expense-chart" class="bar-chart"></div>
-        </div>
-
-        <div class="chart-card">
-          <h3>Saídas por Categoria</h3>
-          <div id="expense-category-chart" class="bar-chart"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="formulario">
-      <h2>Relatório por Categoria no Mês</h2>
-
-      <div class="report-table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Categoria</th>
-              <th>Entradas</th>
-              <th>Saídas</th>
-              <th>Saldo</th>
-            </tr>
-          </thead>
-
-          <tbody id="category-report-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="tabela">
-      <h2>Lançamentos</h2>
-
-      <div class="filters">
-        <select id="filter-category">
-          <option value="todos">Todas as categorias</option>
-        </select>
-
-        <select id="filter-type">
-          <option value="all">Todos</option>
-          <option value="entrada">Entradas</option>
-          <option value="saida">Saídas</option>
-        </select>
-
-        <select id="filter-status">
-          <option value="todos">Todos os status</option>
-          <option value="pendente">Pendentes</option>
-          <option value="pago">Pagos</option>
-          <option value="recebido">Recebidos</option>
-          <option value="vencido">Vencidos</option>
-        </select>
-      </div>
-
-      <div class="report-table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Descrição</th>
-              <th>Categoria</th>
-              <th>Valor</th>
-              <th>Lançamento</th>
-              <th>Vencimento</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-
-          <tbody id="transactions-table-body"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <script src="app.js"></script>
 </body>

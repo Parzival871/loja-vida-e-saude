@@ -33,6 +33,57 @@ header h1 {
   margin-bottom: 5px;
 }
 
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - 88px);
+}
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 220px;
+  flex-shrink: 0;
+  padding: 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.app-nav-button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #333;
+  border: 1px solid transparent;
+  font-weight: bold;
+}
+
+.app-nav-button:hover {
+  background: var(--surface-alt);
+}
+
+.app-nav-button.is-active {
+  background: var(--brand);
+  color: #fff;
+}
+
+.app-nav-button.is-active:hover {
+  background: var(--brand-dark);
+}
+
+.app-view:last-child .formulario:last-child,
+.app-view:last-child .tabela:last-child,
+.app-view:last-child .summary-section:last-child {
+  margin-bottom: 0;
+}
+
+#app-main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px;
+}
+
 main {
   padding: 20px;
 }
@@ -329,6 +380,40 @@ th {
 }
 
 @media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+    min-height: auto;
+    padding-bottom: 72px;
+  }
+
+  .app-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    flex-direction: row;
+    width: 100%;
+    padding: 8px;
+    gap: 6px;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .app-nav-button {
+    flex: 1;
+    min-height: 48px;
+    padding: 10px 6px;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  #app-main {
+    padding: 16px;
+    padding-bottom: 16px;
+  }
+
   main {
     padding: 16px;
   }

@@ -4,7 +4,18 @@ const STORAGE_KEYS = {
   legacyCategories: "categories",
   migrationBackupV1: "loja-vida-e-saude:migration-backup:v1",
   destructiveBackup: "loja-vida-e-saude:destructive-backup",
+  activeView: "loja-vida-e-saude:active-view",
 };
+
+const APP_VIEWS = {
+  dashboard: "view-dashboard",
+  cashflow: "view-cashflow",
+  transactions: "view-transactions",
+  reports: "view-reports",
+  settings: "view-settings",
+};
+
+const VALID_VIEW_NAMES = Object.keys(APP_VIEWS);
 
 const APP_INFO = {
   appName: "Loja Vida e Saúde",
@@ -45,6 +56,9 @@ const DECIMAL_INPUT_FORMATTER = new Intl.NumberFormat("pt-BR", {
 });
 
 const DOM = {
+  appNav: document.getElementById("app-nav"),
+  appNavButtons: document.querySelectorAll(".app-nav-button[data-view]"),
+
   form: document.getElementById("transaction-form"),
   formFeedback: document.getElementById("form-feedback"),
 
@@ -487,6 +501,51 @@ function updateStatusOptions(preferredStatus = null) {
 function getCategoryListFromState() {
   return [...new Set(state.categories.map((category) => category.trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function switchView(viewName) {
+  const targetView = VALID_VIEW_NAMES.includes(viewName) ? viewName : "dashboard";
+
+  VALID_VIEW_NAMES.forEach((name) => {
+    const viewElement = document.getElementById(APP_VIEWS[name]);
+
+    if (!viewElement) {
+      return;
+    }
+
+    viewElement.hidden = name !== targetView;
+  });
+
+  DOM.appNavButtons.forEach((button) => {
+    const isActive = button.dataset.view === targetView;
+    button.classList.toggle("is-active", isActive);
+
+    if (isActive) {
+      button.setAttribute("aria-current", "page");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
+
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.activeView, targetView);
+  } catch (error) {
+    console.warn("Não foi possível salvar a view ativa.", error);
+  }
+}
+
+function getSavedViewName() {
+  try {
+    const savedView = sessionStorage.getItem(STORAGE_KEYS.activeView);
+
+    if (savedView && VALID_VIEW_NAMES.includes(savedView)) {
+      return savedView;
+    }
+  } catch (error) {
+    console.warn("Não foi possível ler a view ativa.", error);
+  }
+
+  return "dashboard";
 }
 
 function safeReadJson(key) {
@@ -1323,6 +1382,8 @@ function editTransaction(id) {
     return;
   }
 
+  switchView("transactions");
+
   editingTransactionId = id;
   DOM.type.value = transaction.type;
   updateStatusOptions(transaction.status);
@@ -1512,6 +1573,16 @@ function handleStorageSync(event) {
 }
 
 function bindEvents() {
+  DOM.appNav.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-view]");
+
+    if (!button) {
+      return;
+    }
+
+    switchView(button.dataset.view);
+  });
+
   DOM.form.addEventListener("submit", handleFormSubmit);
 
   DOM.transactionsTableBody.addEventListener("click", (event) => {
@@ -1578,6 +1649,7 @@ function init() {
   updateStatusOptions("pendente");
   bindEvents();
   renderAll();
+  switchView(getSavedViewName());
 }
 
 init();
